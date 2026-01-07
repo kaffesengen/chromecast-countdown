@@ -123,10 +123,14 @@
     google-cast-launcher{
       width: 28px;
       height: 28px;
-      display:inline-block;
-      cursor:pointer;
-      opacity: .95;
+      display: inline-block;
+      cursor: pointer;
+
+      /* VIKTIG: gjør ikonet synlig på mørk bakgrunn */
+      --disconnected-color: rgba(255,255,255,.92);
+      --connected-color: #2EE59D;
     }
+
 
     .statusDot{
       width:10px; height:10px;
@@ -616,3 +620,4 @@
 </script>
 </body>
 </html>
+
