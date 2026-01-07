@@ -1,0 +1,92 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Countdown Sender</title>
+
+  <!-- Cast Web Sender SDK -->
+  <script src="https://www.gstatic.com/cv/js/sender/v1/cast_sender.js?loadCastFramework=1"></script>
+  <style>
+    body { font-family: system-ui, sans-serif; padding: 16px; }
+    .row { margin: 12px 0; display: flex; gap: 10px; align-items: center; flex-wrap: wrap; }
+    input, button { font-size: 16px; padding: 10px; }
+    .hint { opacity: .75; }
+  </style>
+</head>
+<body>
+  <h1>Nedtelling til klokkeslett</h1>
+
+  <div class="row">
+    <label>Tekst:</label>
+    <input id="label" value="Skole" />
+  </div>
+
+  <div class="row">
+    <label>Klokkeslett:</label>
+    <input id="time" type="time" value="07:45" step="60" />
+  </div>
+
+  <div class="row">
+    <!-- Cast-knapp -->
+    <google-cast-launcher></google-cast-launcher>
+    <button id="castBtn">Start nedtelling på TV</button>
+  </div>
+
+  <p class="hint">
+    Tips: Hvis du vil telle ned til “i morgen 07:45”, velg tid og huk av for “neste dag” (kan legges til).
+  </p>
+
+<script>
+  // 1) Sett din Receiver App ID her (fra Cast Developer Console)
+  const RECEIVER_APP_ID = "REPLACE_WITH_YOUR_APP_ID";
+
+  window.__onGCastApiAvailable = function(isAvailable) {
+    if (!isAvailable) return;
+
+    const context = cast.framework.CastContext.getInstance();
+    context.setOptions({
+      receiverApplicationId: RECEIVER_APP_ID,
+      autoJoinPolicy: chrome.cast.AutoJoinPolicy.ORIGIN_SCOPED
+    });
+  };
+
+  function computeTargetEpochMs(hhmm) {
+    const [hh, mm] = hhmm.split(":").map(Number);
+    const now = new Date();
+    const target = new Date(now);
+    target.setHours(hh, mm, 0, 0);
+
+    // Hvis tidspunktet allerede har passert i dag: tell ned til i morgen
+    if (target.getTime() <= now.getTime()) {
+      target.setDate(target.getDate() + 1);
+    }
+    return target.getTime();
+  }
+
+  async function startCast() {
+    const label = document.getElementById("label").value.trim() || "Nedtelling";
+    const hhmm = document.getElementById("time").value || "07:45";
+    const targetEpochMs = computeTargetEpochMs(hhmm);
+
+    const context = cast.framework.CastContext.getInstance();
+    const session = context.getCurrentSession();
+    if (!session) {
+      alert("Koble til en Cast-enhet med Cast-knappen først.");
+      return;
+    }
+
+    // Vi “laster media” bare for å få et LOAD-call med customData.
+    // contentId kan være hva som helst her; vi spiller ikke av video.
+    const mediaInfo = new chrome.cast.media.MediaInfo("urn:x-cast:countdown", "application/x-cast-countdown");
+    const request = new chrome.cast.media.LoadRequest(mediaInfo);
+
+    request.customData = { targetEpochMs, label };
+
+    await session.loadMedia(request);
+  }
+
+  document.getElementById("castBtn").addEventListener("click", startCast);
+</script>
+</body>
+</html>
