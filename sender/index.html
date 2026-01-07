@@ -1,114 +1,618 @@
 <!doctype html>
-<html>
+<html lang="no">
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width,initial-scale=1" />
   <title>Nedtelling til klokkeslett</title>
 
-  <!-- Cast SDK: MÅ lastes tidlig -->
+  <!-- 1) Sett App ID her -->
   <script>
+    const RECEIVER_APP_ID = "088AB566";
+
+    // Må være definert før cast_sender.js lastes
     window.__onGCastApiAvailable = function(isAvailable) {
-      if (isAvailable) {
+      if (!isAvailable) return;
+
+      try {
         const context = cast.framework.CastContext.getInstance();
         context.setOptions({
-          receiverApplicationId: "088AB566",
+          receiverApplicationId: RECEIVER_APP_ID,
           autoJoinPolicy: chrome.cast.AutoJoinPolicy.ORIGIN_SCOPED
         });
+      } catch (e) {
+        console.warn("Cast framework init failed:", e);
       }
     };
   </script>
 
+  <!-- Cast Web Sender SDK -->
   <script src="https://www.gstatic.com/cv/js/sender/v1/cast_sender.js?loadCastFramework=1"></script>
 
   <style>
-    google-cast-launcher {
-      width: 40px;
-      height: 40px;
-      cursor: pointer;
-      display: inline-block;
-      vertical-align: middle;
+    :root{
+      --bg0:#070A12;
+      --bg1:#0B1020;
+      --card: rgba(255,255,255,.08);
+      --card2: rgba(255,255,255,.06);
+      --stroke: rgba(255,255,255,.16);
+      --text: rgba(255,255,255,.92);
+      --muted: rgba(255,255,255,.68);
+      --muted2: rgba(255,255,255,.55);
+      --shadow: 0 18px 60px rgba(0,0,0,.45);
+      --radius: 18px;
+      --radius2: 14px;
+      --pad: 18px;
+      --ok: #2EE59D;
+      --warn:#FFB020;
+      --danger:#FF4D4D;
+      --btn: rgba(255,255,255,.10);
+      --btnHover: rgba(255,255,255,.16);
     }
+
+    * { box-sizing: border-box; }
+    html, body { height:100%; }
+    body{
+      margin:0;
+      font-family: ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial, "Apple Color Emoji","Segoe UI Emoji";
+      color: var(--text);
+      background:
+        radial-gradient(1000px 700px at 20% 10%, rgba(46,229,157,.16), transparent 55%),
+        radial-gradient(900px 600px at 80% 20%, rgba(86,147,255,.18), transparent 55%),
+        radial-gradient(900px 700px at 60% 90%, rgba(255,176,32,.10), transparent 60%),
+        linear-gradient(180deg, var(--bg0), var(--bg1));
+      display:flex;
+      align-items:center;
+      justify-content:center;
+      padding: 26px;
+    }
+
+    .shell{
+      width:min(980px, 100%);
+      display:grid;
+      grid-template-columns: 1.2fr .8fr;
+      gap: 18px;
+    }
+
+    @media (max-width: 860px){
+      .shell{ grid-template-columns: 1fr; }
+    }
+
+    .card{
+      background: linear-gradient(180deg, var(--card), var(--card2));
+      border: 1px solid var(--stroke);
+      border-radius: var(--radius);
+      box-shadow: var(--shadow);
+      backdrop-filter: blur(12px);
+      -webkit-backdrop-filter: blur(12px);
+      overflow:hidden;
+    }
+
+    .cardHead{
+      padding: 18px 18px 14px;
+      border-bottom: 1px solid rgba(255,255,255,.10);
+      display:flex;
+      align-items:flex-start;
+      justify-content:space-between;
+      gap:12px;
+    }
+
+    h1{
+      margin:0;
+      font-size: 22px;
+      letter-spacing: .2px;
+    }
+    .subtitle{
+      margin-top: 6px;
+      color: var(--muted);
+      font-size: 13px;
+      line-height: 1.35;
+    }
+
+    .castArea{
+      display:flex;
+      align-items:center;
+      gap:10px;
+      padding: 10px 12px;
+      border-radius: 999px;
+      border: 1px solid rgba(255,255,255,.14);
+      background: rgba(255,255,255,.06);
+      user-select:none;
+      white-space:nowrap;
+    }
+
+    google-cast-launcher{
+      width: 28px;
+      height: 28px;
+      display:inline-block;
+      cursor:pointer;
+      opacity: .95;
+    }
+
+    .statusDot{
+      width:10px; height:10px;
+      border-radius:999px;
+      background: rgba(255,255,255,.25);
+      box-shadow: 0 0 0 4px rgba(255,255,255,.06);
+    }
+    .statusDot.ok{ background: var(--ok); box-shadow: 0 0 0 4px rgba(46,229,157,.14); }
+    .statusDot.warn{ background: var(--warn); box-shadow: 0 0 0 4px rgba(255,176,32,.14); }
+
+    .statusText{
+      font-size: 12px;
+      color: var(--muted);
+    }
+    .statusText strong{
+      color: var(--text);
+      font-weight: 650;
+    }
+
+    .cardBody{ padding: 18px; }
+
+    .grid{
+      display:grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 14px;
+    }
+    @media (max-width: 520px){
+      .grid{ grid-template-columns: 1fr; }
+    }
+
+    label{
+      display:block;
+      font-size: 12px;
+      color: var(--muted);
+      margin-bottom: 6px;
+    }
+
+    .field{
+      width:100%;
+      padding: 12px 12px;
+      border-radius: 14px;
+      border: 1px solid rgba(255,255,255,.14);
+      background: rgba(0,0,0,.18);
+      color: var(--text);
+      outline: none;
+      transition: border-color .15s ease, transform .05s ease;
+    }
+    .field:focus{
+      border-color: rgba(86,147,255,.55);
+    }
+
+    .row{
+      display:flex;
+      gap:10px;
+      align-items:center;
+      flex-wrap: wrap;
+      margin-top: 14px;
+    }
+
+    .btn{
+      border: 1px solid rgba(255,255,255,.14);
+      background: var(--btn);
+      color: var(--text);
+      padding: 12px 14px;
+      border-radius: 14px;
+      cursor:pointer;
+      transition: background .15s ease, transform .05s ease;
+      font-weight: 650;
+      letter-spacing: .2px;
+    }
+    .btn:hover{ background: var(--btnHover); }
+    .btn:active{ transform: translateY(1px); }
+
+    .btnPrimary{
+      background: linear-gradient(180deg, rgba(86,147,255,.30), rgba(86,147,255,.14));
+      border-color: rgba(86,147,255,.55);
+    }
+    .btnPrimary:hover{
+      background: linear-gradient(180deg, rgba(86,147,255,.38), rgba(86,147,255,.18));
+    }
+
+    .pillRow{
+      display:flex;
+      gap:8px;
+      flex-wrap:wrap;
+      margin-top: 10px;
+    }
+    .pill{
+      border: 1px solid rgba(255,255,255,.14);
+      background: rgba(255,255,255,.06);
+      color: var(--text);
+      padding: 8px 10px;
+      border-radius: 999px;
+      cursor:pointer;
+      font-size: 12px;
+      transition: background .15s ease;
+    }
+    .pill:hover{ background: rgba(255,255,255,.10); }
+
+    .toggle{
+      display:flex;
+      align-items:center;
+      gap:10px;
+      margin-top: 12px;
+      padding: 10px 12px;
+      border-radius: 14px;
+      border: 1px solid rgba(255,255,255,.12);
+      background: rgba(255,255,255,.05);
+    }
+    .toggle input{ transform: scale(1.2); }
+
+    .hint{
+      color: var(--muted2);
+      font-size: 12px;
+      margin-top: 10px;
+      line-height: 1.45;
+    }
+
+    .sideCard .cardBody{ padding: 16px; }
+    .sideTitle{
+      margin:0 0 10px 0;
+      font-size: 14px;
+      color: var(--text);
+      letter-spacing: .2px;
+    }
+    .kpi{
+      display:flex;
+      align-items:baseline;
+      justify-content:space-between;
+      padding: 12px 12px;
+      border-radius: 14px;
+      background: rgba(255,255,255,.05);
+      border: 1px solid rgba(255,255,255,.10);
+      margin-bottom: 10px;
+    }
+    .kpi .val{
+      font-weight: 750;
+      font-variant-numeric: tabular-nums;
+    }
+    .kpi .lbl{
+      color: var(--muted);
+      font-size: 12px;
+    }
+
+    .toast{
+      margin-top: 12px;
+      padding: 10px 12px;
+      border-radius: 14px;
+      border: 1px solid rgba(255,255,255,.12);
+      background: rgba(0,0,0,.18);
+      color: var(--muted);
+      font-size: 12px;
+      line-height: 1.4;
+    }
+    .toast strong{ color: var(--text); }
+
+    .hidden{ display:none !important; }
+    .mono{ font-variant-numeric: tabular-nums; font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono","Courier New", monospace; }
   </style>
 </head>
 
 <body>
-  <h1>Nedtelling til klokkeslett</h1>
+  <div class="shell">
+    <!-- Main -->
+    <section class="card">
+      <div class="cardHead">
+        <div>
+          <h1>Nedtelling til klokkeslett</h1>
+          <div class="subtitle">Velg en tekst og et klokkeslett. Koble til TV med Cast-ikonet, og start nedtelling.</div>
+        </div>
 
-  <div class="row">
-    <label>Tekst:</label>
-    <input id="label" value="Skole" />
+        <div class="castArea" title="Koble til Chromecast">
+          <span id="dot" class="statusDot warn"></span>
+          <div class="statusText" id="castStatus">
+            <strong>Ikke koblet</strong><br/>
+            <span>Trykk Cast-ikonet</span>
+          </div>
+          <google-cast-launcher></google-cast-launcher>
+        </div>
+      </div>
+
+      <div class="cardBody">
+        <div class="grid">
+          <div>
+            <label for="label">Tekst</label>
+            <input class="field" id="label" value="Skole" maxlength="40" />
+            <div class="pillRow">
+              <button class="pill" type="button" data-label="Skole">Skole</button>
+              <button class="pill" type="button" data-label="Leggetid">Leggetid</button>
+              <button class="pill" type="button" data-label="Avreise">Avreise</button>
+              <button class="pill" type="button" data-label="Skjermtid ferdig">Skjermtid ferdig</button>
+            </div>
+          </div>
+
+          <div>
+            <label for="time">Klokkeslett</label>
+            <input class="field mono" id="time" type="time" value="07:45" step="60" />
+            <div class="toggle">
+              <input id="forceNextDay" type="checkbox" />
+              <div>
+                <div style="font-weight:650">Tving neste dag</div>
+                <div class="hint" style="margin:4px 0 0">Hvis det er senere enn valgt tid i dag, velger vi automatisk i morgen uansett.</div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="row">
+          <button class="btn btnPrimary" id="startBtn" type="button">Start nedtelling på TV</button>
+          <button class="btn" id="stopBtn" type="button">Stopp</button>
+          <button class="btn" id="refreshBtn" type="button">Oppdater status</button>
+        </div>
+
+        <div class="hint">
+          Tips: Hvis du vil telle ned til <span class="mono">07:45</span> i morgen, velg tid og huk av for «Tving neste dag» (eller la systemet velge automatisk hvis tidspunktet allerede er passert).
+        </div>
+
+        <div id="msg" class="toast hidden"></div>
+
+        <!-- Fallback cast connect (hvis launcher ikke vises av en eller annen grunn) -->
+        <div class="row" style="margin-top:14px;">
+          <button class="btn" id="fallbackConnectBtn" type="button">Koble til TV (fallback)</button>
+          <span class="hint">Brukes bare hvis Cast-ikonet ikke vises.</span>
+        </div>
+      </div>
+    </section>
+
+    <!-- Side -->
+    <aside class="card sideCard">
+      <div class="cardHead">
+        <div>
+          <h1 style="font-size:16px; margin:0;">Status</h1>
+          <div class="subtitle">Hjelper deg å se hva som sendes til TV-en.</div>
+        </div>
+      </div>
+      <div class="cardBody">
+        <div class="kpi">
+          <div class="lbl">Mål-klokkeslett</div>
+          <div class="val mono" id="kpiTarget">--:--</div>
+        </div>
+        <div class="kpi">
+          <div class="lbl">Mål-dato</div>
+          <div class="val mono" id="kpiDate">----</div>
+        </div>
+        <div class="kpi">
+          <div class="lbl">Epoch (ms)</div>
+          <div class="val mono" id="kpiEpoch">—</div>
+        </div>
+
+        <div class="toast">
+          <strong>OBS:</strong> Denne websiden fungerer som “sender”. Den må være koblet til Chromecast via Cast-ikonet for å kunne starte receiveren.
+        </div>
+        <div class="toast">
+          Hvis Cast ikke dukker opp: sjekk at du bruker <strong>Chrome på PC/Mac</strong>, og at PC og Chromecast er på samme Wi-Fi.
+        </div>
+      </div>
+    </aside>
   </div>
-
-  <div class="row">
-    <label>Klokkeslett:</label>
-    <input id="time" type="time" value="07:45" step="60" />
-  </div>
-
-  <div class="row">
-    <div style="margin: 16px 0;">
-  <google-cast-launcher></google-cast-launcher>
-  <span> Koble til TV</span>
-</div>
-    <google-cast-launcher></google-cast-launcher>
-    <button id="castBtn">Start nedtelling på TV</button>
-  </div>
-
-  <p class="hint">
-    Tips: Hvis du vil telle ned til “i morgen 07:45”, velg tid og huk av for “neste dag” (kan legges til).
-  </p>
 
 <script>
-  // 1) Sett din Receiver App ID her (fra Cast Developer Console)
-  const RECEIVER_APP_ID = "088AB566";
+  const $ = (id) => document.getElementById(id);
 
-  window.__onGCastApiAvailable = function(isAvailable) {
-    if (!isAvailable) return;
+  const labelEl = $("label");
+  const timeEl = $("time");
+  const nextDayEl = $("forceNextDay");
 
-    const context = cast.framework.CastContext.getInstance();
-    context.setOptions({
-      receiverApplicationId: RECEIVER_APP_ID,
-      autoJoinPolicy: chrome.cast.AutoJoinPolicy.ORIGIN_SCOPED
-    });
-  };
+  const startBtn = $("startBtn");
+  const stopBtn = $("stopBtn");
+  const refreshBtn = $("refreshBtn");
 
-  function computeTargetEpochMs(hhmm) {
+  const msg = $("msg");
+  const castStatus = $("castStatus");
+  const dot = $("dot");
+
+  const kpiTarget = $("kpiTarget");
+  const kpiDate = $("kpiDate");
+  const kpiEpoch = $("kpiEpoch");
+
+  const fallbackConnectBtn = $("fallbackConnectBtn");
+
+  function showMsg(text, kind = "info") {
+    msg.classList.remove("hidden");
+    msg.innerHTML = text;
+    msg.style.borderColor =
+      kind === "ok" ? "rgba(46,229,157,.35)" :
+      kind === "warn" ? "rgba(255,176,32,.35)" :
+      kind === "danger" ? "rgba(255,77,77,.35)" :
+      "rgba(255,255,255,.12)";
+  }
+
+  function hideMsg() {
+    msg.classList.add("hidden");
+    msg.innerHTML = "";
+  }
+
+  function pad(n){ return String(n).padStart(2, "0"); }
+
+  function computeTargetEpochMs(hhmm, forceNextDay) {
     const [hh, mm] = hhmm.split(":").map(Number);
     const now = new Date();
     const target = new Date(now);
     target.setHours(hh, mm, 0, 0);
 
-    // Hvis tidspunktet allerede har passert i dag: tell ned til i morgen
+    if (forceNextDay) {
+      target.setDate(target.getDate() + 1);
+      return target.getTime();
+    }
+
+    // Hvis tidspunkt allerede har passert i dag -> i morgen
     if (target.getTime() <= now.getTime()) {
       target.setDate(target.getDate() + 1);
     }
     return target.getTime();
   }
 
-  async function startCast() {
-    const label = document.getElementById("label").value.trim() || "Nedtelling";
-    const hhmm = document.getElementById("time").value || "07:45";
-    const targetEpochMs = computeTargetEpochMs(hhmm);
-
-    const context = cast.framework.CastContext.getInstance();
-    const session = context.getCurrentSession();
-    if (!session) {
-      alert("Koble til en Cast-enhet med Cast-knappen først.");
-      return;
-    }
-
-    // Vi “laster media” bare for å få et LOAD-call med customData.
-    // contentId kan være hva som helst her; vi spiller ikke av video.
-    const mediaInfo = new chrome.cast.media.MediaInfo("urn:x-cast:countdown", "application/x-cast-countdown");
-    const request = new chrome.cast.media.LoadRequest(mediaInfo);
-
-    request.customData = { targetEpochMs, label };
-
-    await session.loadMedia(request);
+  function updateKpis(targetEpochMs) {
+    const d = new Date(targetEpochMs);
+    kpiTarget.textContent = `${pad(d.getHours())}:${pad(d.getMinutes())}`;
+    kpiDate.textContent = `${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())}`;
+    kpiEpoch.textContent = String(targetEpochMs);
   }
 
-  document.getElementById("castBtn").addEventListener("click", startCast);
+  function getCastContextSafe() {
+    try { return cast.framework.CastContext.getInstance(); }
+    catch { return null; }
+  }
+
+  function getSession() {
+    const ctx = getCastContextSafe();
+    return ctx ? ctx.getCurrentSession() : null;
+  }
+
+  function setStatus(connected, deviceName = "") {
+    if (connected) {
+      dot.className = "statusDot ok";
+      castStatus.innerHTML = `<strong>Koblet</strong><br/><span>${deviceName || "Cast-enhet"}</span>`;
+    } else {
+      dot.className = "statusDot warn";
+      castStatus.innerHTML = `<strong>Ikke koblet</strong><br/><span>Trykk Cast-ikonet</span>`;
+    }
+  }
+
+  function refreshCastStatus() {
+    const session = getSession();
+    if (!session) {
+      setStatus(false);
+      return;
+    }
+    // Device name om mulig
+    let name = "";
+    try {
+      const castSession = session.getSessionObj();
+      if (castSession && castSession.receiver && castSession.receiver.friendlyName) {
+        name = castSession.receiver.friendlyName;
+      }
+    } catch {}
+    setStatus(true, name);
+  }
+
+  async function ensureConnectedOrExplain() {
+    const session = getSession();
+    if (session) return session;
+
+    showMsg(
+      `Du er ikke koblet til en Cast-enhet enda.<br/>
+       <strong>Trykk Cast-ikonet</strong> øverst til høyre (ved “Ikke koblet”), velg Chromecast, og prøv igjen.`,
+      "warn"
+    );
+    refreshCastStatus();
+    return null;
+  }
+
+  async function startCastCountdown() {
+    hideMsg();
+
+    const label = (labelEl.value || "").trim() || "Nedtelling";
+    const hhmm = timeEl.value || "07:45";
+    const targetEpochMs = computeTargetEpochMs(hhmm, nextDayEl.checked);
+
+    updateKpis(targetEpochMs);
+
+    const session = await ensureConnectedOrExplain();
+    if (!session) return;
+
+    // Send LOAD med customData til receiver
+    try {
+      const mediaInfo = new chrome.cast.media.MediaInfo(
+        "urn:x-cast:countdown",
+        "application/x-cast-countdown"
+      );
+      const request = new chrome.cast.media.LoadRequest(mediaInfo);
+      request.customData = { targetEpochMs, label };
+
+      await session.loadMedia(request);
+      showMsg(`Sendt til TV ✅<br/><span class="mono">${label}</span> → <span class="mono">${new Date(targetEpochMs).toLocaleString()}</span>`, "ok");
+      refreshCastStatus();
+    } catch (e) {
+      console.error(e);
+      showMsg(
+        `Klarte ikke å starte på TV.<br/>
+         Sjekk at Chromecast er registrert som test device og at App ID er riktig.<br/>
+         <span class="mono">${String(e)}</span>`,
+        "danger"
+      );
+    }
+  }
+
+  async function stopCast() {
+    hideMsg();
+    const session = getSession();
+    if (!session) {
+      showMsg("Ikke koblet til Cast-enhet.", "warn");
+      return;
+    }
+    try {
+      // Stopper casting / avslutter session
+      session.endSession(true);
+      showMsg("Stoppet casting.", "ok");
+    } catch (e) {
+      console.error(e);
+      showMsg(`Kunne ikke stoppe: <span class="mono">${String(e)}</span>`, "danger");
+    } finally {
+      setTimeout(refreshCastStatus, 300);
+    }
+  }
+
+  async function fallbackConnect() {
+    hideMsg();
+    const ctx = getCastContextSafe();
+    if (!ctx) {
+      showMsg("Cast SDK er ikke tilgjengelig. Bruk Chrome på PC/Mac.", "danger");
+      return;
+    }
+    try {
+      await ctx.requestSession();
+      refreshCastStatus();
+      showMsg("Koblet til Cast-enhet.", "ok");
+    } catch (e) {
+      console.error(e);
+      showMsg(`Klarte ikke å koble til: <span class="mono">${String(e)}</span>`, "danger");
+    }
+  }
+
+  // Preset labels
+  document.querySelectorAll("[data-label]").forEach(btn => {
+    btn.addEventListener("click", () => {
+      labelEl.value = btn.getAttribute("data-label") || "";
+      hideMsg();
+    });
+  });
+
+  startBtn.addEventListener("click", startCastCountdown);
+  stopBtn.addEventListener("click", stopCast);
+  refreshBtn.addEventListener("click", () => {
+    hideMsg();
+    refreshCastStatus();
+  });
+  fallbackConnectBtn.addEventListener("click", fallbackConnect);
+
+  // Oppdater KPI ved endringer
+  function updatePreview() {
+    const hhmm = timeEl.value || "07:45";
+    const targetEpochMs = computeTargetEpochMs(hhmm, nextDayEl.checked);
+    updateKpis(targetEpochMs);
+  }
+  timeEl.addEventListener("change", updatePreview);
+  nextDayEl.addEventListener("change", updatePreview);
+
+  // Live status hooks
+  function wireCastEventsWhenReady() {
+    const ctx = getCastContextSafe();
+    if (!ctx) return;
+
+    try {
+      ctx.addEventListener(
+        cast.framework.CastContextEventType.SESSION_STATE_CHANGED,
+        () => refreshCastStatus()
+      );
+    } catch {}
+
+    refreshCastStatus();
+  }
+
+  // Vent litt så Cast SDK rekker å komme opp
+  setTimeout(wireCastEventsWhenReady, 800);
+  updatePreview();
 </script>
 </body>
 </html>
-
-
