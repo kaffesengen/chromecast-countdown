@@ -3,17 +3,34 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width,initial-scale=1" />
-  <title>Countdown Sender</title>
+  <title>Nedtelling til klokkeslett</title>
 
-  <!-- Cast Web Sender SDK -->
+  <!-- Cast SDK: MÅ lastes tidlig -->
+  <script>
+    window.__onGCastApiAvailable = function(isAvailable) {
+      if (isAvailable) {
+        const context = cast.framework.CastContext.getInstance();
+        context.setOptions({
+          receiverApplicationId: "088AB566",
+          autoJoinPolicy: chrome.cast.AutoJoinPolicy.ORIGIN_SCOPED
+        });
+      }
+    };
+  </script>
+
   <script src="https://www.gstatic.com/cv/js/sender/v1/cast_sender.js?loadCastFramework=1"></script>
+
   <style>
-    body { font-family: system-ui, sans-serif; padding: 16px; }
-    .row { margin: 12px 0; display: flex; gap: 10px; align-items: center; flex-wrap: wrap; }
-    input, button { font-size: 16px; padding: 10px; }
-    .hint { opacity: .75; }
+    google-cast-launcher {
+      width: 40px;
+      height: 40px;
+      cursor: pointer;
+      display: inline-block;
+      vertical-align: middle;
+    }
   </style>
 </head>
+
 <body>
   <h1>Nedtelling til klokkeslett</h1>
 
@@ -28,7 +45,10 @@
   </div>
 
   <div class="row">
-    <!-- Cast-knapp -->
+    <div style="margin: 16px 0;">
+  <google-cast-launcher></google-cast-launcher>
+  <span> Koble til TV</span>
+</div>
     <google-cast-launcher></google-cast-launcher>
     <button id="castBtn">Start nedtelling på TV</button>
   </div>
@@ -90,4 +110,5 @@
 </script>
 </body>
 </html>
+
 
