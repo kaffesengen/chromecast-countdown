@@ -7,47 +7,40 @@
   <script src="https://www.gstatic.com/cv/js/sender/v1/cast_sender.js?loadCastFramework=1"></script>
   <style>
     * { box-sizing: border-box; }
+    :root {
+      --bg1: #070A12; --bg2: #0B1020;
+    }
     body {
       margin: 0; font-family: -apple-system, sans-serif; height: 100vh;
       display: flex; align-items: center; justify-content: center; padding: 15px;
-      background: linear-gradient(270deg, #070A12, #0B1020, #070A12);
-      background-size: 400% 400%;
-      animation: MovingBg 15s ease infinite;
-      color: white;
+      background: linear-gradient(135deg, var(--bg1), var(--bg2));
+      transition: background 1s ease; color: white;
     }
-    @keyframes MovingBg {
-      0% { background-position: 0% 50%; }
-      50% { background-position: 100% 50%; }
-      100% { background-position: 0% 50%; }
-    }
-
     .card {
       background: rgba(255,255,255,.08); border: 1px solid rgba(255,255,255,.15);
-      padding: 30px; border-radius: 25px; width: min(450px, 100%);
+      padding: 25px; border-radius: 25px; width: min(450px, 100%);
       backdrop-filter: blur(15px); box-shadow: 0 25px 50px rgba(0,0,0,0.5);
     }
-    .header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 25px; }
+    .header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; }
     .cast-btn { width: 38px; height: 38px; cursor: pointer; --disconnected-color: white; --connected-color: #2EE59D; }
     
-    label { display: block; font-size: 13px; opacity: 0.8; margin-top: 18px; font-weight: 500; }
+    label { display: block; font-size: 13px; opacity: 0.8; margin-top: 15px; font-weight: 600; text-transform: uppercase; }
     input, select, button { 
-      width: 100%; padding: 14px; margin-top: 6px; border-radius: 12px; 
+      width: 100%; padding: 12px; margin-top: 6px; border-radius: 12px; 
       border: 1px solid rgba(255,255,255,.1); background: rgba(0,0,0,0.4); color: white; font-size: 16px;
     }
-    input[type="time"]::-webkit-calendar-picker-indicator { filter: invert(1); }
-    
-    .info-box { 
-      background: rgba(46, 229, 157, 0.1); border-left: 4px solid #2EE59D;
-      padding: 12px; margin-top: 20px; font-size: 13px; border-radius: 4px;
-    }
 
-    .btn-start { background: #2b5797; border: none; font-weight: bold; margin-top: 25px; cursor: pointer; transition: 0.2s; }
-    .btn-start:hover { background: #3c78c9; transform: translateY(-2px); }
-    
-    .btn-stop { background: rgba(255, 50, 50, 0.2); border: 1px solid rgba(255, 50, 50, 0.5); font-weight: bold; margin-top: 10px; cursor: pointer; color: #ffbcbc; }
-    .btn-stop:hover { background: rgba(255, 50, 50, 0.4); }
-    
-    .status { font-size: 12px; margin-top: 15px; text-align: center; opacity: 0.7; font-family: monospace; }
+    /* Temavelger */
+    .theme-row { display: flex; gap: 15px; margin-top: 10px; justify-content: space-between; }
+    .theme-dot {
+      width: 50px; height: 50px; border-radius: 15px; cursor: pointer;
+      border: 3px solid transparent; transition: 0.3s;
+    }
+    .theme-dot.active { border-color: #2EE59D; transform: scale(1.1); }
+
+    .btn-start { background: #2b5797; border: none; font-weight: bold; margin-top: 25px; cursor: pointer; }
+    .btn-stop { background: rgba(255, 50, 50, 0.2); border: 1px solid rgba(255, 50, 50, 0.3); margin-top: 10px; cursor: pointer; color: #ffbcbc; }
+    .status { font-size: 12px; margin-top: 15px; text-align: center; opacity: 0.6; }
   </style>
 </head>
 <body>
@@ -59,61 +52,63 @@
   </div>
 
   <label>Hva skjer?</label>
-  <input type="text" id="label" value="Middag" maxlength="30">
+  <input type="text" id="label" value="Middag" placeholder="F.eks. Skole eller Spill">
 
-  <label>Måltid (24t)</label>
+  <label>Tidspunkt</label>
   <input type="time" id="time" value="18:00">
 
-  <label>Velg musikk fra mappen din</label>
-  <select id="music" onchange="updateMusicInfo()">
+  <label>Musikk</label>
+  <select id="music">
     <option value="">Ingen musikk</option>
     <option value="sounds/chill_morning.mp3">Chill Morning</option>
     <option value="sounds/morning_vibe.mp3">Morning Vibe</option>
   </select>
 
-  <div class="info-box" id="music-info">Valgt musikk: Ingen</div>
+  <label>Fargetema</label>
+  <div class="theme-row">
+    <div class="theme-dot active" style="background: linear-gradient(135deg, #051937, #00bf72);" onclick="setTheme('nordlys', this)"></div>
+    <div class="theme-dot" style="background: linear-gradient(135deg, #ee0979, #ff6a00);" onclick="setTheme('sunset', this)"></div>
+    <div class="theme-dot" style="background: linear-gradient(135deg, #021b79, #0575e6);" onclick="setTheme('ocean', this)"></div>
+    <div class="theme-dot" style="background: linear-gradient(135deg, #434343, #000000);" onclick="setTheme('dark', this)"></div>
+  </div>
 
-  <label style="display: flex; align-items: center; gap: 10px; cursor: pointer; margin-top: 20px;">
-    <input type="checkbox" id="explosion" checked style="width: auto; margin:0;">
-    Aktiver bombe-effekt (bomb.m4a)
-  </label>
-
-  <button class="btn-start" id="send">START NEDTELLING</button>
-  <button class="btn-stop" id="stop">STOPP ALT</button>
-  
-  <div class="status" id="status">Koble til en enhet for å begynne</div>
+  <button class="btn-start" id="send">START PÅ TV</button>
+  <button class="btn-stop" id="stop">STOPP</button>
+  <div class="status" id="status">Koble til enhet</div>
 </div>
 
 <script>
   const APP_ID = "088AB566";
-  
-  function updateMusicInfo() {
-    const sel = document.getElementById("music");
-    const text = sel.options[sel.selectedIndex].text;
-    document.getElementById("music-info").innerText = "Valgt musikk: " + text;
+  let selectedColors = ["#051937", "#004d7a", "#008793", "#00bf72"];
+  const themes = {
+    nordlys: ["#051937", "#004d7a", "#008793", "#00bf72"],
+    sunset: ["#ee0979", "#ff6a00", "#f42f4b", "#ff9068"],
+    ocean: ["#021b79", "#0575e6", "#203a43", "#2c5364"],
+    dark: ["#232526", "#414345", "#000000", "#434343"]
+  };
+
+  function setTheme(t, el) {
+    selectedColors = themes[t];
+    document.querySelectorAll('.theme-dot').forEach(d => d.classList.remove('active'));
+    el.classList.add('active');
+    document.documentElement.style.setProperty('--bg1', selectedColors[0]);
+    document.documentElement.style.setProperty('--bg2', selectedColors[1]);
   }
 
   window.__onGCastApiAvailable = (available) => {
     if (available) {
       const ctx = cast.framework.CastContext.getInstance();
-      ctx.setOptions({ 
-        receiverApplicationId: APP_ID, 
-        autoJoinPolicy: chrome.cast.AutoJoinPolicy.ORIGIN_SCOPED 
-      });
+      ctx.setOptions({ receiverApplicationId: APP_ID, autoJoinPolicy: chrome.cast.AutoJoinPolicy.ORIGIN_SCOPED });
       ctx.addEventListener(cast.framework.CastContextEventType.SESSION_STATE_CHANGED, () => {
         const s = ctx.getCastState();
-        document.getElementById("status").innerText = s === "CONNECTED" ? "Koblet til TV ✅" : "Søker etter enheter...";
+        document.getElementById("status").innerText = s === "CONNECTED" ? "Tilkoblet ✅" : "Søker...";
       });
     }
   };
 
-  // STOPP-FUNKSJON
   document.getElementById("stop").onclick = () => {
-    const session = cast.framework.CastContext.getInstance().getCurrentSession();
-    if (session) {
-      session.endSession(true);
-      document.getElementById("status").innerText = "Nedtelling stoppet.";
-    }
+    const s = cast.framework.CastContext.getInstance().getCurrentSession();
+    if (s) s.endSession(true);
   };
 
   document.getElementById("send").onclick = async () => {
@@ -130,17 +125,10 @@
       targetEpoch: target.getTime(),
       label: document.getElementById("label").value,
       musicUrl: document.getElementById("music").value,
-      useExplosion: document.getElementById("explosion").checked
+      backgroundColors: selectedColors
     };
-
-    try {
-      await session.loadMedia(loadRequest);
-      document.getElementById("status").innerText = "Suksess! Nedtelling startet.";
-    } catch (e) { 
-      document.getElementById("status").innerText = "Kunne ikke starte."; 
-    }
+    await session.loadMedia(loadRequest);
   };
 </script>
-
 </body>
 </html>
