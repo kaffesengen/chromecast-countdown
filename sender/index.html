@@ -37,31 +37,92 @@
   </script>
 
   <style>
+    /* VIKTIG: Sikrer at padding og rammer ikke gjør elementene bredere enn 100% */
+    * {
+      box-sizing: border-box;
+    }
+
     :root {
       --bg0: #070A12; --bg1: #0B1020; --text: rgba(255,255,255,.92);
       --muted: rgba(255,255,255,.68); --ok: #2EE59D; --warn: #FFB020;
       --radius: 18px; --stroke: rgba(255,255,255,.16);
     }
+
     body {
-      margin: 0; background: linear-gradient(180deg, var(--bg0), var(--bg1));
-      color: var(--text); font-family: sans-serif; height: 100vh;
-      display: flex; align-items: center; justify-content: center;
+      margin: 0; 
+      background: linear-gradient(180deg, var(--bg0), var(--bg1));
+      color: var(--text); 
+      font-family: sans-serif; 
+      height: 100vh;
+      display: flex; 
+      align-items: center; 
+      justify-content: center;
+      padding: 10px; /* Litt avstand på mobil */
     }
+
     .card {
-      background: rgba(255,255,255,.05); border: 1px solid var(--stroke);
-      padding: 24px; border-radius: var(--radius); width: min(500px, 90%);
+      background: rgba(255,255,255,.05); 
+      border: 1px solid var(--stroke);
+      padding: 24px; 
+      border-radius: var(--radius); 
+      width: min(500px, 100%); /* Bruker 100% av tilgjengelig plass opp til 500px */
       backdrop-filter: blur(10px);
+      box-shadow: 0 10px 30px rgba(0,0,0,0.3);
     }
-    .header { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 20px; }
-    .cast-btn { --disconnected-color: white; --connected-color: var(--ok); width: 32px; height: 32px; }
+
+    .header { 
+      display: flex; 
+      justify-content: space-between; 
+      align-items: flex-start; 
+      margin-bottom: 20px; 
+    }
+
+    .cast-btn { 
+      --disconnected-color: white; 
+      --connected-color: var(--ok); 
+      width: 32px; 
+      height: 32px; 
+      cursor: pointer;
+    }
+
+    /* Fikset padding og bredde her */
     input, button { 
-      width: 100%; padding: 12px; margin-top: 8px; border-radius: 10px; 
-      border: 1px solid var(--stroke); background: rgba(0,0,0,.3); color: white;
+      width: 100%; 
+      padding: 12px; 
+      margin-top: 8px; 
+      border-radius: 10px; 
+      border: 1px solid var(--stroke); 
+      background: rgba(0,0,0,0.3); 
+      color: white;
+      font-size: 16px; /* Hindrer auto-zoom på iPhone */
+      display: block;
     }
-    button { background: #2b5797; cursor: pointer; font-weight: bold; border: none; }
+
+    button { 
+      background: #2b5797; 
+      cursor: pointer; 
+      font-weight: bold; 
+      border: none; 
+      transition: background 0.2s;
+    }
+
     button:hover { background: #3572b0; }
-    .status-area { font-size: 12px; margin-top: 15px; padding: 10px; border-radius: 8px; background: rgba(255,255,255,.05); }
+
+    .status-area { 
+      font-size: 12px; 
+      margin-top: 15px; 
+      padding: 10px; 
+      border-radius: 8px; 
+      background: rgba(255,255,255,.05); 
+      border: 1px solid var(--stroke);
+    }
+
     .mono { font-family: monospace; }
+    
+    label {
+      display: block;
+      margin-top: 15px;
+    }
   </style>
 </head>
 
@@ -76,10 +137,10 @@
     <google-cast-launcher class="cast-btn"></google-cast-launcher>
   </div>
 
-  <label style="font-size:12px">Hva skal skje?</label>
+  <label style="font-size:12px; margin-top:0;">Hva skal skje?</label>
   <input type="text" id="input_task_label" value="Skole" placeholder="Eks: Middag">
 
-  <label style="font-size:12px; margin-top:15px; display:block">Når?</label>
+  <label style="font-size:12px;">Når?</label>
   <input type="time" id="input_task_time" value="07:45">
 
   <button id="btn_send">Start på TV</button>
@@ -92,13 +153,11 @@
 <script>
   const $ = (id) => document.getElementById(id);
   
-  // Element-referanser med unike navn
   const labelInput = $("input_task_label");
   const timeInput = $("input_task_time");
   const sendBtn = $("btn_send");
   const statusTxt = $("txt_status");
 
-  // Oppdater status-tekst når Cast-tilstand endres
   function updateCastStatus() {
     const context = cast.framework.CastContext.getInstance();
     const state = context.getCastState();
@@ -109,14 +168,12 @@
     else if (state === "CONNECTED") statusTxt.innerText = "Koblet til TV ✅";
   }
 
-  // Lytt etter endringer i Cast-status
   setTimeout(() => {
     const ctx = cast.framework.CastContext.getInstance();
     ctx.addEventListener(cast.framework.CastContextEventType.SESSION_STATE_CHANGED, updateCastStatus);
     updateCastStatus();
   }, 1000);
 
-  // Send data til TV
   sendBtn.onclick = async () => {
     const session = cast.framework.CastContext.getInstance().getCurrentSession();
     
@@ -128,7 +185,6 @@
     const label = labelInput.value;
     const timeVal = timeInput.value;
     
-    // Beregn tid
     const [h, m] = timeVal.split(":").map(Number);
     const targetDate = new Date();
     targetDate.setHours(h, m, 0, 0);
@@ -140,7 +196,6 @@
       targetEpoch: targetDate.getTime()
     };
 
-    // Vi bruker LoadRequest for å trigge receiveren din
     const mediaInfo = new chrome.cast.media.MediaInfo("countdown_id", "application/x-cast-countdown");
     const request = new chrome.cast.media.LoadRequest(mediaInfo);
     request.customData = payload;
@@ -157,5 +212,3 @@
 
 </body>
 </html>
-
-
