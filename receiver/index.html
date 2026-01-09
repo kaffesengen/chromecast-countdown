@@ -2,36 +2,106 @@
 <html>
 <head>
     <meta charset="utf-8" />
-    <title>Countdown Receiver</title>
+    <title>Countdown Receiver v3</title>
     <style>
-        html, body { height: 100%; margin: 0; background: #000; color: #fff; font-family: sans-serif; overflow: hidden; }
-        .wrap { height: 100%; display: flex; flex-direction: column; align-items: center; justify-content: center; transition: background 0.8s ease; }
-        .title { font-size: 4vw; opacity: 0.8; margin-bottom: 2vh; }
-        .time { font-size: 15vw; font-weight: bold; font-variant-numeric: tabular-nums; }
-        .sub { font-size: 2.5vw; opacity: 0.6; margin-top: 2vh; }
-        .bombe { font-size: 12vw; margin-top: 20px; display: none; }
+        * { box-sizing: border-box; }
+        html, body { height: 100%; margin: 0; overflow: hidden; font-family: 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; }
         
-        /* Eksplosjon-effekt */
-        .explode { background: radial-gradient(circle, #ff0000, #440000, #000) !important; animation: shake 0.1s infinite; }
-        @keyframes shake { 0% { transform: translate(3px, 3px); } 50% { transform: translate(-3px, -2px); } 100% { transform: translate(3px, 3px); } }
+        /* Den animerte bakgrunnen */
+        body {
+            background: linear-gradient(-45deg, #051937, #004d7a, #008793, #00bf72);
+            background-size: 400% 400%;
+            animation: gradient 15s ease infinite;
+            color: #fff;
+        }
+
+        @keyframes gradient {
+            0% { background-position: 0% 50%; }
+            50% { background-position: 100% 50%; }
+            100% { background-position: 0% 50%; }
+        }
+
+        .wrap { 
+            height: 100%; 
+            display: flex; 
+            flex-direction: column; 
+            align-items: center; 
+            justify-content: center; 
+            text-align: center;
+            padding: 0 5vw;
+        }
+        
+        /* HER ER DIN NYE TEKST-STYLING */
+        .title { 
+            font-size: 6vw; 
+            font-weight: 800; 
+            margin-bottom: 0; 
+            text-transform: uppercase; 
+            letter-spacing: 8px;
+            color: #fff;
+            text-shadow: 0 0 20px rgba(255,255,255,0.4), 0 10px 10px rgba(0,0,0,0.3);
+            line-height: 1.1;
+        }
+
+        .time { 
+            font-size: 18vw; 
+            font-weight: 900; 
+            font-variant-numeric: tabular-nums; 
+            line-height: 1; 
+            margin: 2vh 0;
+            filter: drop-shadow(0 15px 15px rgba(0,0,0,0.4));
+        }
+        
+        .info-container { display: flex; flex-direction: column; align-items: center; gap: 15px; }
+        .sub { font-size: 2.2vw; opacity: 0.8; font-weight: 300; letter-spacing: 2px; }
+        
+        .music-display { 
+            font-size: 1.8vw; 
+            background: rgba(255,255,255,0.1); 
+            padding: 12px 35px; 
+            border-radius: 100px; 
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255,255,255,0.2);
+            display: inline-block;
+            box-shadow: 0 5px 15px rgba(0,0,0,0.2);
+        }
+
+        .bombe { font-size: 15vw; display: none; margin-top: -50px; }
+        
+        .explode { 
+            background: radial-gradient(circle, #ff0000, #220000) !important; 
+            animation: shake 0.1s infinite !important; 
+        }
+
+        @keyframes shake {
+            0% { transform: translate(3px, 3px); }
+            50% { transform: translate(-3px, -3px); }
+            100% { transform: translate(3px, 3px); }
+        }
     </style>
     <script src="https://www.gstatic.com/cast/sdk/libs/caf_receiver/v3/cast_receiver_framework.js"></script>
 </head>
 <body>
     <div class="wrap" id="main-wrap">
-        <div id="title" class="title">Venter på nedtelling...</div>
+        <div id="title-display" class="title">NEDTELLING</div>
+        
         <div class="time" id="time">00:00:00</div>
-        <div id="sub" class="sub">Klar til bruk</div>
+        
+        <div class="info-container">
+            <div id="sub" class="sub">Klar til bruk</div>
+            <div id="music-text" class="music-display">🎵 Ingen musikk valgt</div>
+        </div>
+        
         <div class="bombe" id="bombe">💣💥</div>
     </div>
 
     <audio id="bg-music" loop></audio>
-    <audio id="explosion-sound" src="https://upload.wikimedia.org/wikipedia/commons/2/21/Explosion_Medium_Distant.mp3"></audio>
+    <audio id="explosion-sound" src="https://cdn.pixabay.com/audio/2022/03/10/audio_f5394d603a.mp3"></audio>
 
     <script>
         const ctx = cast.framework.CastReceiverContext.getInstance();
         const playerManager = ctx.getPlayerManager();
-        const state = { target: null, label: "Nedtelling", useExplosion: true, finished: false };
+        const state = { target: null, label: "", useExplosion: true, finished: false };
 
         function formatHMS(ms) {
             const totalSec = Math.max(0, Math.floor(ms / 1000));
@@ -43,16 +113,14 @@
 
         function render() {
             if (!state.target || state.finished) return;
+            const left = state.target - Date.now();
             
-            const now = Date.now();
-            const left = state.target - now;
-
-            document.getElementById("title").textContent = state.label;
+            // Oppdaterer "Hva skjer"-teksten
+            document.getElementById("title-display").textContent = state.label || "NEDTELLING";
             document.getElementById("time").textContent = formatHMS(left);
             
-            // 24-timers format for "Mål"-teksten
             const targetStr = new Date(state.target).toLocaleTimeString('no-NO', { hour: '2-digit', minute: '2-digit', hour12: false });
-            document.getElementById("sub").textContent = `Mål: Kl. ${targetStr}`;
+            document.getElementById("sub").textContent = `Ferdig kl. ${targetStr}`;
 
             if (left <= 0) {
                 state.finished = true;
@@ -62,33 +130,43 @@
 
         function triggerExplosion() {
             const wrap = document.getElementById("main-wrap");
-            const music = document.getElementById("bg-music");
-            const boom = document.getElementById("explosion-sound");
-            
-            music.pause();
+            document.getElementById("bg-music").pause();
             document.getElementById("time").textContent = "00:00:00";
-            document.getElementById("title").textContent = "TIDEN ER UTE!";
+            document.getElementById("title-display").textContent = "TIDEN ER UTE!";
+            document.getElementById("music-text").style.display = "none";
 
             if (state.useExplosion) {
                 wrap.classList.add("explode");
                 document.getElementById("bombe").style.display = "block";
-                boom.play().catch(e => console.log("Lyd feilet", e));
+                document.getElementById("explosion-sound").play().catch(e => console.log(e));
             }
         }
+
+        const musicNames = {
+            "https://cdn.pixabay.com/audio/2022/03/10/audio_afbd95499a.mp3": "Cinematic Pulse",
+            "https://cdn.pixabay.com/audio/2024/02/09/audio_4e7f6e6a12.mp3": "Tense Background",
+            "https://cdn.pixabay.com/audio/2022/01/18/audio_d0a13f69d2.mp3": "Suspenseful Action",
+            "https://cdn.pixabay.com/audio/2021/11/22/audio_404cc196c3.mp3": "Clock Ticking"
+        };
 
         playerManager.setMessageInterceptor(cast.framework.messages.MessageType.LOAD, (data) => {
             const cd = data.customData || {};
             state.target = cd.targetEpoch;
-            state.label = cd.label || "Nedtelling";
+            state.label = cd.label; // Her hentes "Hva skjer"-teksten
             state.useExplosion = cd.useExplosion;
             state.finished = false;
 
             const music = document.getElementById("bg-music");
+            const musicLabel = document.getElementById("music-text");
+
             if (cd.musicUrl) {
                 music.src = cd.musicUrl;
-                music.play().catch(e => console.log("Musikk blokkert"));
+                music.play().catch(e => console.log("Autoplay blokkert"));
+                musicLabel.style.display = "inline-block";
+                musicLabel.textContent = "🎵 " + (musicNames[cd.musicUrl] || "Spiller musikk...");
             } else {
                 music.pause();
+                musicLabel.style.display = "none";
             }
 
             document.getElementById("main-wrap").classList.remove("explode");
@@ -96,10 +174,7 @@
             return data;
         });
 
-        const options = new cast.framework.CastReceiverOptions();
-        options.disableIdleTimeout = true; 
-        ctx.start(options);
-
+        ctx.start({disableIdleTimeout: true});
         setInterval(render, 500);
     </script>
 </body>
