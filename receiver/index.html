@@ -2,35 +2,41 @@
 <html>
 <head>
     <meta charset="utf-8" />
-    <title>Countdown Receiver v9</title>
+    <title>Bombe Receiver</title>
     <style>
-        * { box-sizing: border-box; }
         :root { --c1: #051937; --c2: #004d7a; --c3: #008793; --c4: #00bf72; }
-        html, body { height: 100%; margin: 0; overflow: hidden; font-family: 'Segoe UI', sans-serif; }
         body {
+            margin: 0; height: 100vh; overflow: hidden; font-family: 'Segoe UI', sans-serif;
             background: linear-gradient(-45deg, var(--c1), var(--c2), var(--c3), var(--c4));
-            background-size: 400% 400%;
-            animation: gradient 15s ease infinite;
-            color: #fff; transition: all 2s ease;
+            background-size: 400% 400%; animation: gradient 15s ease infinite;
+            color: white; display: flex; flex-direction: column; align-items: center; justify-content: center;
         }
         @keyframes gradient { 0% { background-position: 0% 50%; } 50% { background-position: 100% 50%; } 100% { background-position: 0% 50%; } }
         
-        .wrap { height: 100%; display: flex; flex-direction: column; align-items: center; justify-content: center; text-align: center; }
-        .title { font-size: 7vw; font-weight: 800; text-transform: uppercase; letter-spacing: 10px; text-shadow: 0 10px 30px rgba(0,0,0,0.5); }
-        .time { font-size: 22vw; font-weight: 900; font-variant-numeric: tabular-nums; line-height: 0.9; margin: 20px 0; }
-        .music-tag { font-size: 2vw; background: rgba(255,255,255,0.1); padding: 12px 45px; border-radius: 50px; backdrop-filter: blur(10px); border: 1px solid rgba(255,255,255,0.2); margin-top: 20px; }
-        .bombe-ikon { font-size: 20vw; display: none; }
+        #wall-clock { position: absolute; top: 40px; right: 50px; font-size: 3vw; font-family: monospace; opacity: 0.6; }
+        .title { font-size: 5vw; font-weight: 800; letter-spacing: 10px; margin-bottom: 0; text-shadow: 0 5px 15px rgba(0,0,0,0.5); }
+        .time { font-size: 18vw; font-weight: 900; margin: 0; line-height: 1; }
+        
+        .lunte-container { width: 70vw; height: 30px; background: rgba(0,0,0,0.3); border-radius: 15px; margin-top: 40px; position: relative; border: 2px solid rgba(255,255,255,0.1); overflow: hidden; }
+        #lunte-bar { height: 100%; width: 100%; background: linear-gradient(to left, #ffcc00, #ff4400); border-radius: 15px; transition: width 0.5s linear; position: relative; }
+        #gnist { position: absolute; right: 0; top: -10px; font-size: 40px; animation: flicker 0.1s infinite; }
+        @keyframes flicker { 0% { opacity: 1; transform: scale(1); } 50% { opacity: 0.7; transform: scale(1.2); } 100% { opacity: 1; transform: scale(1); } }
+
+        .bombe-ikon { font-size: 25vw; display: none; }
         .explode { background: radial-gradient(circle, #ff0000, #000) !important; animation: shake 0.1s infinite !important; }
         @keyframes shake { 0% { transform: translate(3px,3px); } 50% { transform: translate(-3px,-3px); } 100% { transform: translate(3px,3px); } }
     </style>
     <script src="https://www.gstatic.com/cast/sdk/libs/caf_receiver/v3/cast_receiver_framework.js"></script>
 </head>
 <body>
-    <div class="wrap" id="main-wrap">
+    <div id="wall-clock">00:00:00</div>
+    <div id="main-wrap" style="text-align:center; width: 100%;">
         <div id="title-display" class="title">KLAR</div>
         <div class="time" id="time">00:00:00</div>
-        <div id="music-text" class="music-tag" style="display:none">🎵 Musikk</div>
-        <div class="bombe-ikon" id="bombe-ikon">💣</div>
+        <div class="lunte-container" id="lunte-wrap">
+            <div id="lunte-bar"><div id="gnist">🔥</div></div>
+        </div>
+        <div class="bombe-ikon" id="bombe-ikon">💣💥</div>
     </div>
 
     <audio id="bg-music" loop crossorigin="anonymous"></audio>
@@ -39,78 +45,63 @@
     <script>
         const ctx = cast.framework.CastReceiverContext.getInstance();
         const playerManager = ctx.getPlayerManager();
-        const state = { target: null, label: "", finished: false };
+        const state = { target: null, start: null, finished: false };
 
-        function formatHMS(ms) {
-            const s = Math.max(0, Math.floor(ms / 1000));
-            const h = Math.floor(s / 3600);
-            const m = Math.floor((s % 3600) / 60);
-            const sec = s % 60;
-            return `${String(h).padStart(2,'0')}:${String(m).padStart(2,'0')}:${String(sec).padStart(2,'0')}`;
-        }
+        setInterval(() => {
+            document.getElementById('wall-clock').innerText = new Date().toLocaleTimeString('nb-NO');
+        }, 1000);
 
         playerManager.setMessageInterceptor(cast.framework.messages.MessageType.LOAD, (data) => {
             const cd = data.customData || {};
             state.target = cd.targetEpoch;
-            state.label = cd.label;
+            state.start = cd.startEpoch;
             state.finished = false;
 
-            // Farger
             if (cd.backgroundColors) {
                 const r = document.documentElement;
                 cd.backgroundColors.forEach((c, i) => r.style.setProperty(`--c${i+1}`, c));
             }
 
-            // LYD-LOGIKK
             const music = document.getElementById("bg-music");
             if (cd.musicUrl) {
                 music.src = cd.musicUrl;
-                
-                // TVING FILTYPE (Siden m4a fungerte, hjelper vi TV-en her)
-                if (cd.musicUrl.endsWith('.mp3')) {
-                    music.type = 'audio/mpeg';
-                } else if (cd.musicUrl.endsWith('.m4a')) {
-                    music.type = 'audio/mp4';
-                }
-
                 music.load();
-                music.volume = 1.0;
-
-                const attemptPlay = () => {
-                    music.play().then(() => console.log("Lyd spiller!")).catch(() => {
-                        setTimeout(attemptPlay, 1000);
-                    });
-                };
-                music.oncanplay = attemptPlay;
-                
-                document.getElementById("music-text").style.display = "inline-block";
-                document.getElementById("music-text").textContent = "🎵 " + cd.musicUrl.split('/').pop().replace('.mp3', '').replace(/_/g, ' ');
-            } else {
-                music.pause();
-                document.getElementById("music-text").style.display = "none";
+                const attempt = () => music.play().catch(() => setTimeout(attempt, 1000));
+                attempt();
             }
 
             document.getElementById("main-wrap").classList.remove("explode");
+            document.getElementById("lunte-wrap").style.display = "block";
+            document.getElementById("time").style.display = "block";
             document.getElementById("bombe-ikon").style.display = "none";
             return data;
         });
 
-        ctx.start({ disableIdleTimeout: true });
         setInterval(() => {
             if (!state.target || state.finished) return;
-            const left = state.target - Date.now();
-            document.getElementById("title-display").textContent = state.label || "NEDTELLING";
-            document.getElementById("time").textContent = formatHMS(left);
-            if (left <= 0) {
+            const now = Date.now();
+            const total = state.target - state.start;
+            const remaining = state.target - now;
+            
+            const s = Math.max(0, Math.floor(remaining / 1000));
+            document.getElementById("time").textContent = new Date(s * 1000).toISOString().substr(11, 8);
+            
+            const pct = Math.max(0, (remaining / total) * 100);
+            document.getElementById("lunte-bar").style.width = pct + "%";
+
+            if (remaining <= 0) {
                 state.finished = true;
                 document.getElementById("bg-music").pause();
                 document.getElementById("main-wrap").classList.add("explode");
+                document.getElementById("lunte-wrap").style.display = "none";
+                document.getElementById("time").style.display = "none";
+                document.getElementById("title-display").textContent = "BOOOOM!";
                 document.getElementById("bombe-ikon").style.display = "block";
-                document.getElementById("title-display").textContent = "TIDEN ER UTE!";
-                document.getElementById("music-text").style.display = "none";
-                document.getElementById("explosion-sound").play().catch(e => console.error(e));
+                document.getElementById("explosion-sound").play();
             }
         }, 500);
+
+        ctx.start();
     </script>
 </body>
 </html>
