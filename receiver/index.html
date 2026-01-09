@@ -2,169 +2,150 @@
 <html>
 <head>
     <meta charset="utf-8" />
-    <title>Cat Dash Receiver</title>
+    <title>Giraffe Dash Receiver</title>
     <style>
-        body { margin: 0; overflow: hidden; background: #000; font-family: 'Comic Sans MS', sans-serif; }
-        #game-canvas { width: 100vw; height: 100vh; background: linear-gradient(180deg, #1a2a6c, #b21f1f, #fdbb2d); transition: background 5s; }
-        #ui { position: absolute; top: 20px; left: 20px; color: white; font-size: 3vw; font-weight: bold; text-shadow: 4px 4px #000; }
-        #lives { position: absolute; top: 20px; right: 20px; font-size: 3vw; }
+        body { margin: 0; overflow: hidden; background: #000; font-family: 'Arial Black', sans-serif; }
+        #ui { position: absolute; top: 30px; left: 40px; color: white; font-size: 4vw; z-index: 10; font-style: italic; }
+        #lives { position: absolute; top: 30px; right: 40px; font-size: 3vw; z-index: 10; letter-spacing: 5px; }
+        
+        canvas { 
+            width: 100vw; height: 100vh; 
+            animation: colorShift 10s infinite alternate;
+        }
+        
+        @keyframes colorShift {
+            0% { background: #1a2a6c; }
+            33% { background: #b21f1f; }
+            66% { background: #4a148c; }
+            100% { background: #004d40; }
+        }
     </style>
     <script src="https://www.gstatic.com/cast/sdk/libs/caf_receiver/v3/cast_receiver_framework.js"></script>
 </head>
 <body>
-    <div id="ui">POENG: <span id="score">0</span></div>
+    <div id="ui">SCORE: <span id="score">0</span></div>
     <div id="lives">❤️❤️❤️❤️❤️❤️❤️❤️❤️</div>
-    <canvas id="game-canvas"></canvas>
-
-    <audio id="sfx-hit" src="sounds/bomb.m4a" crossorigin="anonymous"></audio>
+    <canvas id="game"></canvas>
 
     <script>
-        const canvas = document.getElementById('game-canvas');
+        const canvas = document.getElementById('game');
         const ctx = canvas.getContext('2d');
         canvas.width = window.innerWidth;
         canvas.height = window.innerHeight;
 
-        const NAMESPACE = 'urn:x-cast:no.kaffesengen.catdash';
         const context = cast.framework.CastReceiverContext.getInstance();
+        const NAMESPACE = 'urn:x-cast:no.kaffesengen.catdash';
 
-        // Spill-variabler
-        let score = 0;
-        let lives = 9;
-        let gameActive = false;
-        let speed = 8;
-        let frame = 0;
-        let obstacles = [];
+        let score = 0, lives = 9, gameActive = false, speed = 10, frame = 0, obstacles = [], hitEffect = 0;
 
-        const cat = {
-            x: 150, y: canvas.height - 200, w: 100, h: 100,
-            dy: 0, jumpForce: 25, gravity: 1.2, grounded: true, ducking: false
+        const giraffe = {
+            x: 100, y: 0, w: 80, h: 160,
+            dy: 0, jumpForce: 30, gravity: 1.5, grounded: false, ducking: false
         };
 
-        // Lytt etter kontrolleren
-        context.addCustomMessageListener(NAMESPACE, (event) => {
-            const cmd = event.data.command;
+        context.addCustomMessageListener(NAMESPACE, (e) => {
+            const cmd = e.data.command;
             if (cmd === 'START') resetGame();
-            if (cmd === 'JUMP' && cat.grounded) {
-                cat.dy = -cat.jumpForce;
-                cat.grounded = false;
+            if (cmd === 'JUMP' && giraffe.grounded) {
+                giraffe.dy = -giraffe.jumpForce;
+                giraffe.grounded = false;
             }
             if (cmd === 'DUCK') {
-                cat.ducking = true;
-                setTimeout(() => { cat.ducking = false; }, 600);
+                giraffe.ducking = true;
+                setTimeout(() => { giraffe.ducking = false; }, 600);
             }
         });
 
         function resetGame() {
-            score = 0; lives = 9; speed = 8; obstacles = []; gameActive = true;
-            updateUI();
-        }
-
-        function spawnObstacle() {
-            const type = Math.random() > 0.3 ? 'box' : 'bird';
-            if (Math.random() < 0.05) { // Fisk-spawn
-                obstacles.push({ x: canvas.width, y: canvas.height - 250, w: 60, h: 40, type: 'fish' });
-            } else {
-                const yPos = type === 'box' ? canvas.height - 150 : canvas.height - 350;
-                obstacles.push({ x: canvas.width, y: yPos, w: 80, h: 80, type: type });
-            }
+            score = 0; lives = 9; speed = 10; obstacles = []; gameActive = true;
+            giraffe.y = canvas.height - 210;
         }
 
         function update() {
             if (!gameActive) return;
             frame++;
+            if (hitEffect > 0) hitEffect--;
 
-            // Tyngdekraft
-            cat.y += cat.dy;
-            if (cat.y + cat.h < canvas.height - 50) {
-                cat.dy += cat.gravity;
+            // Physics
+            giraffe.y += giraffe.dy;
+            if (giraffe.y + (giraffe.ducking ? 80 : 160) < canvas.height - 50) {
+                giraffe.dy += giraffe.gravity;
+                giraffe.grounded = false;
             } else {
-                cat.y = canvas.height - 150;
-                cat.dy = 0;
-                cat.grounded = true;
+                giraffe.y = canvas.height - 50 - (giraffe.ducking ? 80 : 160);
+                giraffe.dy = 0;
+                giraffe.grounded = true;
             }
 
-            // Spawn logikk
-            if (frame % Math.floor(1000 / speed) === 0) spawnObstacle();
+            // Spawn
+            if (frame % Math.floor(800/speed) === 0) {
+                const isBird = Math.random() > 0.5;
+                obstacles.push({
+                    x: canvas.width,
+                    y: isBird ? canvas.height - 300 : canvas.height - 130,
+                    w: 80, h: 80, type: isBird ? '🦅' : '📦', passed: false
+                });
+            }
 
-            // Flytt hindre
-            obstacles.forEach((obs, index) => {
+            // Move Obstacles
+            obstacles.forEach((obs, i) => {
                 obs.x -= speed;
-
-                // Kollisjon
-                const catY = cat.ducking ? cat.y + 50 : cat.y;
-                const catH = cat.ducking ? 50 : cat.h;
-
-                if (cat.x < obs.x + obs.w && cat.x + cat.w > obs.x &&
-                    catY < obs.y + obs.h && catY + catH > obs.y) {
+                
+                // Collision
+                const curH = giraffe.ducking ? 80 : 160;
+                if (giraffe.x < obs.x + 60 && giraffe.x + giraffe.w > obs.x + 20 &&
+                    giraffe.y < obs.y + 60 && giraffe.y + curH > obs.y + 20) {
                     
-                    if (obs.type === 'fish') {
-                        if (lives < 9) lives++;
-                        obstacles.splice(index, 1);
-                    } else {
-                        lives--;
-                        document.getElementById('sfx-hit').play();
-                        obstacles.splice(index, 1);
-                        if (lives <= 0) gameActive = false;
-                    }
-                    updateUI();
+                    lives--;
+                    hitEffect = 20; // Blinker rødt
+                    obstacles.splice(i, 1);
+                    if (lives <= 0) gameActive = false;
+                    document.getElementById('lives').innerText = '❤️'.repeat(lives);
                 }
 
-                // Poeng
-                if (obs.x + obs.w < cat.x && !obs.passed) {
+                if (obs.x + obs.w < giraffe.x && !obs.passed) {
                     obs.passed = true;
                     score += 10;
                     speed += 0.1;
-                    updateUI();
+                    document.getElementById('score').innerText = score;
                 }
-
-                if (obs.x < -100) obstacles.splice(index, 1);
+                if (obs.x < -100) obstacles.splice(i, 1);
             });
         }
 
         function draw() {
             ctx.clearRect(0, 0, canvas.width, canvas.height);
 
-            // Bakken
-            ctx.fillStyle = '#333';
+            // Ground
+            ctx.fillStyle = 'rgba(255,255,255,0.2)';
             ctx.fillRect(0, canvas.height - 50, canvas.width, 50);
 
-            // Katt (Super Mario stil farge)
-            ctx.fillStyle = cat.ducking ? '#ff0000' : '#2EE59D';
-            ctx.font = cat.ducking ? '50px serif' : '100px serif';
-            ctx.fillText(cat.ducking ? '🐱' : '🐈', cat.x, cat.y + (cat.ducking ? 50 : 80));
+            // Giraffe
+            ctx.save();
+            if (hitEffect % 4 > 1) ctx.filter = 'drop-shadow(0px 0px 20px red) brightness(2)';
+            ctx.font = giraffe.ducking ? '80px serif' : '150px serif';
+            // Giraffen ser nå mot høyre (bruker 🦒 og speiler hvis nødvendig, men emojien ser vanligvis høyre/venstre avhengig av OS)
+            ctx.fillText('🦒', giraffe.x, giraffe.y + (giraffe.ducking ? 70 : 130));
+            ctx.restore();
 
-            // Hindre
+            // Obstacles
+            ctx.font = '70px serif';
             obstacles.forEach(obs => {
-                if (obs.type === 'box') ctx.fillText('📦', obs.x, obs.y + 60);
-                else if (obs.type === 'bird') ctx.fillText('🦅', obs.x, obs.y + 60);
-                else if (obs.type === 'fish') ctx.fillText('🐟', obs.x, obs.y + 40);
-                ctx.font = '60px serif';
+                ctx.fillText(obs.type, obs.x, obs.y + 60);
             });
 
             if (!gameActive && lives <= 0) {
-                ctx.fillStyle = 'rgba(0,0,0,0.7)';
+                ctx.fillStyle = 'rgba(0,0,0,0.8)';
                 ctx.fillRect(0,0, canvas.width, canvas.height);
-                ctx.fillStyle = 'white';
+                ctx.fillStyle = '#ffcc00';
                 ctx.font = '80px sans-serif';
-                ctx.fillText('GAME OVER!', canvas.width/2 - 200, canvas.height/2);
-                ctx.font = '40px sans-serif';
-                ctx.fillText('Trykk START på mobilen', canvas.width/2 - 200, canvas.height/2 + 100);
+                ctx.fillText('GAME OVER', canvas.width/2 - 250, canvas.height/2);
             }
-        }
-
-        function updateUI() {
-            document.getElementById('score').innerText = score;
-            document.getElementById('lives').innerText = '❤️'.repeat(lives);
-        }
-
-        function gameLoop() {
-            update();
-            draw();
-            requestAnimationFrame(gameLoop);
+            requestAnimationFrame(() => { update(); draw(); });
         }
 
         context.start();
-        gameLoop();
+        draw();
     </script>
 </body>
 </html>
