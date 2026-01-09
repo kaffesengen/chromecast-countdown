@@ -3,36 +3,41 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no" />
-  <title>Katte-Kontroller</title>
+  <title>Giraff-Kontroll</title>
   <script src="https://www.gstatic.com/cv/js/sender/v1/cast_sender.js?loadCastFramework=1"></script>
   <style>
-    body { margin: 0; background: #111; font-family: 'Arial Black', sans-serif; overflow: hidden; color: white; text-align: center; }
-    .btn-container { display: grid; grid-template-columns: 1fr 1fr; height: 70vh; gap: 10px; padding: 10px; }
-    .control-btn { border: none; border-radius: 20px; font-size: 30px; font-weight: bold; color: white; text-transform: uppercase; box-shadow: 0 10px #000; }
-    .control-btn:active { transform: translateY(5px); box-shadow: 0 5px #000; }
-    .jump { background: #ffcc00; color: #000; }
-    .duck { background: #008793; }
-    .start-btn { width: 95%; padding: 20px; margin-top: 10px; background: #2EE59D; border-radius: 15px; border: none; font-size: 20px; font-weight: bold; }
-    .header { padding: 20px; display: flex; justify-content: space-between; align-items: center; }
+    body { margin: 0; background: #070A12; font-family: sans-serif; overflow: hidden; color: white; display: flex; flex-direction: column; }
+    .header { padding: 15px; display: flex; justify-content: space-between; align-items: center; background: rgba(255,255,255,0.05); }
+    .btn-container { flex-grow: 1; display: flex; flex-direction: column; gap: 20px; padding: 20px; justify-content: center; }
+    .control-btn { 
+        height: 35vh; border: none; border-radius: 25px; font-size: 60px; color: white; 
+        display: flex; align-items: center; justify-content: center; transition: 0.1s;
+        box-shadow: 0 8px rgba(0,0,0,0.4);
+    }
+    .control-btn:active { transform: translateY(4px); box-shadow: 0 4px rgba(0,0,0,0.4); }
+    .jump { background: #2EE59D; }
+    .duck { background: #ff4444; }
+    .start-btn { width: 100%; padding: 15px; background: #ffcc00; border: none; font-weight: bold; font-size: 18px; border-radius: 10px; cursor: pointer; }
   </style>
 </head>
 <body>
   <div class="header">
-    <div style="font-size: 24px;">🐱 CAT DASH</div>
-    <google-cast-launcher style="width:40px;height:40px"></google-cast-launcher>
+    <div style="font-size: 20px; font-weight: 900; color: #ffcc00;">🦒 GIRAFFE DASH</div>
+    <google-cast-launcher style="width:35px;height:35px"></google-cast-launcher>
   </div>
 
-  <button class="start-btn" onclick="sendCommand('START')">START SPILL</button>
-
   <div class="btn-container">
-    <button class="control-btn jump" onmousedown="sendCommand('JUMP')" ontouchstart="sendCommand('JUMP')">HOPP</button>
-    <button class="control-btn duck" onmousedown="sendCommand('DUCK')" ontouchstart="sendCommand('DUCK')">DUKK</button>
+    <button class="start-btn" onclick="sendCommand('START')">START SPILL</button>
+    <button class="control-btn jump" ontouchstart="sendCommand('JUMP')" onmousedown="sendCommand('JUMP')">▲</button>
+    <button class="control-btn duck" ontouchstart="sendCommand('DUCK')" onmousedown="sendCommand('DUCK')">▼</button>
   </div>
 
   <script>
     const APP_ID = '088AB566';
-    window.__onGCastApiAvailable = (isAvailable) => {
-      if (isAvailable) {
+    const NAMESPACE = 'urn:x-cast:no.kaffesengen.catdash';
+    
+    window.__onGCastApiAvailable = (available) => {
+      if (available) {
         cast.framework.CastContext.getInstance().setOptions({
           receiverApplicationId: APP_ID,
           autoJoinPolicy: chrome.cast.AutoJoinPolicy.ORIGIN_SCOPED
@@ -43,8 +48,7 @@
     function sendCommand(cmd) {
       const session = cast.framework.CastContext.getInstance().getCurrentSession();
       if (session) {
-        // Vi bruker custom messages for lynrask respons i spillet
-        session.sendMessage('urn:x-cast:no.kaffesengen.catdash', { command: cmd });
+        session.sendMessage(NAMESPACE, { command: cmd });
       }
     }
   </script>
