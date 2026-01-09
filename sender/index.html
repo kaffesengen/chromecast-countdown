@@ -57,7 +57,7 @@
       display: flex; 
       align-items: center; 
       justify-content: center;
-      padding: 10px; /* Litt avstand på mobil */
+      padding: 10px;
     }
 
     .card {
@@ -65,7 +65,7 @@
       border: 1px solid var(--stroke);
       padding: 24px; 
       border-radius: var(--radius); 
-      width: min(500px, 100%); /* Bruker 100% av tilgjengelig plass opp til 500px */
+      width: min(500px, 100%);
       backdrop-filter: blur(10px);
       box-shadow: 0 10px 30px rgba(0,0,0,0.3);
     }
@@ -85,7 +85,6 @@
       cursor: pointer;
     }
 
-    /* Fikset padding og bredde her */
     input, button { 
       width: 100%; 
       padding: 12px; 
@@ -94,8 +93,14 @@
       border: 1px solid var(--stroke); 
       background: rgba(0,0,0,0.3); 
       color: white;
-      font-size: 16px; /* Hindrer auto-zoom på iPhone */
+      font-size: 16px;
       display: block;
+    }
+
+    /* GJØR KLOKKE-IKONET HVITT */
+    input[type="time"]::-webkit-calendar-picker-indicator {
+      filter: invert(1);
+      cursor: pointer;
     }
 
     button { 
@@ -212,3 +217,4 @@
 
 </body>
 </html>
+
