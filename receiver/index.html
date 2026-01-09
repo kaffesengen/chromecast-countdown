@@ -2,73 +2,91 @@
 <html>
 <head>
     <meta charset="utf-8" />
-    <title>Countdown Receiver v2</title>
+    <title>Countdown Receiver</title>
     <style>
         html, body { height: 100%; margin: 0; background: #000; color: #fff; font-family: sans-serif; overflow: hidden; }
-        .wrap { height: 100%; display: flex; flex-direction: column; align-items: center; justify-content: center; transition: background 0.5s; }
+        .wrap { height: 100%; display: flex; flex-direction: column; align-items: center; justify-content: center; transition: background 0.8s ease; }
+        .title { font-size: 4vw; opacity: 0.8; margin-bottom: 2vh; }
         .time { font-size: 15vw; font-weight: bold; font-variant-numeric: tabular-nums; }
-        .bombe { font-size: 10vw; margin-top: 20px; display: none; }
-        .explode { background: radial-gradient(circle, #ff4d4d, #000) !important; animation: shake 0.2s infinite; }
-        @keyframes shake { 0% { transform: translate(1px, 1px); } 50% { transform: translate(-2px, -1px); } 100% { transform: translate(1px, 1px); } }
+        .sub { font-size: 2.5vw; opacity: 0.6; margin-top: 2vh; }
+        .bombe { font-size: 12vw; margin-top: 20px; display: none; }
+        
+        /* Eksplosjon-effekt */
+        .explode { background: radial-gradient(circle, #ff0000, #440000, #000) !important; animation: shake 0.1s infinite; }
+        @keyframes shake { 0% { transform: translate(3px, 3px); } 50% { transform: translate(-3px, -2px); } 100% { transform: translate(3px, 3px); } }
     </style>
     <script src="https://www.gstatic.com/cast/sdk/libs/caf_receiver/v3/cast_receiver_framework.js"></script>
 </head>
 <body>
     <div class="wrap" id="main-wrap">
-        <div id="title" style="font-size: 4vw; opacity: 0.8;">Venter...</div>
+        <div id="title" class="title">Venter på nedtelling...</div>
         <div class="time" id="time">00:00:00</div>
-        <div id="sub" style="font-size: 2vw;">Koble til for å starte</div>
+        <div id="sub" class="sub">Klar til bruk</div>
         <div class="bombe" id="bombe">💣💥</div>
     </div>
 
     <audio id="bg-music" loop></audio>
-    <audio id="explosion-sound"></audio>
+    <audio id="explosion-sound" src="https://upload.wikimedia.org/wikipedia/commons/2/21/Explosion_Medium_Distant.mp3"></audio>
 
     <script>
         const ctx = cast.framework.CastReceiverContext.getInstance();
         const playerManager = ctx.getPlayerManager();
-        const state = { target: null, label: "", useExplosion: true, musicUrl: "" };
+        const state = { target: null, label: "Nedtelling", useExplosion: true, finished: false };
+
+        function formatHMS(ms) {
+            const totalSec = Math.max(0, Math.floor(ms / 1000));
+            const h = Math.floor(totalSec / 3600);
+            const m = Math.floor((totalSec % 3600) / 60);
+            const s = totalSec % 60;
+            return `${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')}:${String(s).padStart(2, '0')}`;
+        }
 
         function render() {
-            if (!state.target) return;
+            if (!state.target || state.finished) return;
+            
             const now = Date.now();
             const left = state.target - now;
 
-            // 24-timers format (Norge)
-            const timeStr = new Date(state.target).toLocaleTimeString('no-NO', { hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: false });
-            
+            document.getElementById("title").textContent = state.label;
             document.getElementById("time").textContent = formatHMS(left);
-            document.getElementById("sub").textContent = `Mål: ${timeStr}`;
+            
+            // 24-timers format for "Mål"-teksten
+            const targetStr = new Date(state.target).toLocaleTimeString('no-NO', { hour: '2-digit', minute: '2-digit', hour12: false });
+            document.getElementById("sub").textContent = `Mål: Kl. ${targetStr}`;
 
             if (left <= 0) {
+                state.finished = true;
                 triggerExplosion();
             }
         }
 
-        function formatHMS(ms) {
-            const s = Math.max(0, Math.floor(ms / 1000));
-            return new Date(s * 1000).toISOString().substr(11, 8);
-        }
-
         function triggerExplosion() {
+            const wrap = document.getElementById("main-wrap");
+            const music = document.getElementById("bg-music");
+            const boom = document.getElementById("explosion-sound");
+            
+            music.pause();
+            document.getElementById("time").textContent = "00:00:00";
+            document.getElementById("title").textContent = "TIDEN ER UTE!";
+
             if (state.useExplosion) {
-                document.getElementById("main-wrap").classList.add("explode");
+                wrap.classList.add("explode");
                 document.getElementById("bombe").style.display = "block";
-                document.getElementById("bg-music").pause();
-                document.getElementById("explosion-sound").play().catch(() => {});
+                boom.play().catch(e => console.log("Lyd feilet", e));
             }
         }
 
         playerManager.setMessageInterceptor(cast.framework.messages.MessageType.LOAD, (data) => {
             const cd = data.customData || {};
             state.target = cd.targetEpoch;
-            state.label = cd.label;
+            state.label = cd.label || "Nedtelling";
             state.useExplosion = cd.useExplosion;
-            
+            state.finished = false;
+
             const music = document.getElementById("bg-music");
             if (cd.musicUrl) {
                 music.src = cd.musicUrl;
-                music.play().catch(e => console.log("Musikk blokkert før interaksjon"));
+                music.play().catch(e => console.log("Musikk blokkert"));
             } else {
                 music.pause();
             }
@@ -78,7 +96,10 @@
             return data;
         });
 
-        ctx.start();
+        const options = new cast.framework.CastReceiverOptions();
+        options.disableIdleTimeout = true; 
+        ctx.start(options);
+
         setInterval(render, 500);
     </script>
 </body>
