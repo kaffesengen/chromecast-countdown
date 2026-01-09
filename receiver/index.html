@@ -2,25 +2,23 @@
 <html>
 <head>
     <meta charset="utf-8" />
-    <title>Countdown Receiver v7</title>
+    <title>Countdown Receiver v8</title>
     <style>
         * { box-sizing: border-box; }
-        :root {
-            --c1: #051937; --c2: #004d7a; --c3: #008793; --c4: #00bf72;
-        }
+        :root { --c1: #051937; --c2: #004d7a; --c3: #008793; --c4: #00bf72; }
         html, body { height: 100%; margin: 0; overflow: hidden; font-family: 'Segoe UI', sans-serif; }
         body {
             background: linear-gradient(-45deg, var(--c1), var(--c2), var(--c3), var(--c4));
             background-size: 400% 400%;
             animation: gradient 15s ease infinite;
-            color: #fff; transition: all 1.5s ease;
+            color: #fff; transition: all 2s ease;
         }
         @keyframes gradient { 0% { background-position: 0% 50%; } 50% { background-position: 100% 50%; } 100% { background-position: 0% 50%; } }
         
         .wrap { height: 100%; display: flex; flex-direction: column; align-items: center; justify-content: center; text-align: center; }
-        .title { font-size: 7vw; font-weight: 800; text-transform: uppercase; letter-spacing: 10px; text-shadow: 0 10px 30px rgba(0,0,0,0.5); }
-        .time { font-size: 20vw; font-weight: 900; font-variant-numeric: tabular-nums; line-height: 1; margin: 10px 0; }
-        .music-tag { font-size: 2vw; background: rgba(255,255,255,0.1); padding: 10px 40px; border-radius: 50px; backdrop-filter: blur(10px); border: 1px solid rgba(255,255,255,0.2); }
+        .title { font-size: 7vw; font-weight: 800; text-transform: uppercase; letter-spacing: 10px; text-shadow: 0 10px 30px rgba(0,0,0,0.5); margin-bottom: 0; }
+        .time { font-size: 22vw; font-weight: 900; font-variant-numeric: tabular-nums; line-height: 0.9; margin: 20px 0; }
+        .music-tag { font-size: 2vw; background: rgba(255,255,255,0.1); padding: 12px 45px; border-radius: 50px; backdrop-filter: blur(10px); border: 1px solid rgba(255,255,255,0.2); margin-top: 20px; }
         
         .bombe-ikon { font-size: 20vw; display: none; }
         .explode { background: radial-gradient(circle, #ff0000, #000) !important; animation: shake 0.1s infinite !important; }
@@ -37,7 +35,7 @@
     </div>
 
     <audio id="bg-music" loop crossorigin="anonymous"></audio>
-    <audio id="explosion-sound" crossorigin="anonymous" src="sounds/bomb.m4a"></audio>
+    <audio id="explosion-sound" crossorigin="anonymous" src="https://kaffesengen.github.io/chromecast-countdown/sounds/bomb.m4a"></audio>
 
     <script>
         const ctx = cast.framework.CastReceiverContext.getInstance();
@@ -46,26 +44,17 @@
 
         function formatHMS(ms) {
             const s = Math.max(0, Math.floor(ms / 1000));
-            return new Date(s * 1000).toISOString().substr(11, 8);
-        }
-
-        function render() {
-            if (!state.target || state.finished) return;
-            const left = state.target - Date.now();
-            document.getElementById("title-display").textContent = state.label || "NEDTELLING";
-            document.getElementById("time").textContent = formatHMS(left);
-            
-            if (left <= 0) {
-                state.finished = true;
-                triggerExplosion();
-            }
+            const h = Math.floor(s / 3600);
+            const m = Math.floor((s % 3600) / 60);
+            const sec = s % 60;
+            return `${String(h).padStart(2,'0')}:${String(m).padStart(2,'0')}:${String(sec).padStart(2,'0')}`;
         }
 
         function triggerExplosion() {
             document.getElementById("bg-music").pause();
             document.getElementById("main-wrap").classList.add("explode");
             document.getElementById("bombe-ikon").style.display = "block";
-            document.getElementById("title-display").textContent = "BOOOOM!";
+            document.getElementById("title-display").textContent = "TIDEN ER UTE!";
             document.getElementById("music-text").style.display = "none";
             document.getElementById("explosion-sound").play().catch(e => console.error(e));
         }
@@ -76,21 +65,28 @@
             state.label = cd.label;
             state.finished = false;
 
-            // Oppdater farger
+            // Farger
             if (cd.backgroundColors) {
                 const r = document.documentElement;
                 cd.backgroundColors.forEach((c, i) => r.style.setProperty(`--c${i+1}`, c));
             }
 
-            // Musikk-logikk
+            // Lyd-logikk (Forbedret)
             const music = document.getElementById("bg-music");
             if (cd.musicUrl) {
                 music.src = cd.musicUrl;
                 music.load();
-                const p = () => music.play().catch(() => setTimeout(p, 1000));
-                music.oncanplay = p;
+                music.volume = 1.0;
+
+                const attemptPlay = () => {
+                    music.play().then(() => console.log("Lyd OK")).catch(() => {
+                        console.log("Prøver lyd igjen...");
+                        setTimeout(attemptPlay, 1000);
+                    });
+                };
+                music.oncanplay = attemptPlay;
                 document.getElementById("music-text").style.display = "inline-block";
-                document.getElementById("music-text").textContent = "🎵 " + cd.musicUrl.split('/').pop().replace('.mp3', '').replace('_', ' ');
+                document.getElementById("music-text").textContent = "🎵 " + cd.musicUrl.split('/').pop().replace('.mp3', '').replace(/_/g, ' ');
             } else {
                 music.pause();
                 document.getElementById("music-text").style.display = "none";
@@ -102,7 +98,13 @@
         });
 
         ctx.start({ disableIdleTimeout: true });
-        setInterval(render, 500);
+        setInterval(() => {
+            if (!state.target || state.finished) return;
+            const left = state.target - Date.now();
+            document.getElementById("title-display").textContent = state.label || "NEDTELLING";
+            document.getElementById("time").textContent = formatHMS(left);
+            if (left <= 0) { state.finished = true; triggerExplosion(); }
+        }, 500);
     </script>
 </body>
 </html>
