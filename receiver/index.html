@@ -2,24 +2,29 @@
 <html>
 <head>
     <meta charset="utf-8" />
-    <title>Countdown Receiver v6</title>
+    <title>Countdown Receiver v7</title>
     <style>
         * { box-sizing: border-box; }
+        :root {
+            --c1: #051937; --c2: #004d7a; --c3: #008793; --c4: #00bf72;
+        }
         html, body { height: 100%; margin: 0; overflow: hidden; font-family: 'Segoe UI', sans-serif; }
         body {
-            background: linear-gradient(-45deg, #051937, #004d7a, #008793, #00bf72);
+            background: linear-gradient(-45deg, var(--c1), var(--c2), var(--c3), var(--c4));
             background-size: 400% 400%;
             animation: gradient 15s ease infinite;
-            color: #fff;
+            color: #fff; transition: all 1.5s ease;
         }
         @keyframes gradient { 0% { background-position: 0% 50%; } 50% { background-position: 100% 50%; } 100% { background-position: 0% 50%; } }
-        .wrap { height: 100%; display: flex; flex-direction: column; align-items: center; justify-content: center; text-align: center; padding: 0 5vw; }
-        .title { font-size: 6vw; font-weight: 800; text-transform: uppercase; letter-spacing: 8px; text-shadow: 0 10px 20px rgba(0,0,0,0.3); }
-        .time { font-size: 18vw; font-weight: 900; font-variant-numeric: tabular-nums; margin: 2vh 0; }
-        .music-display { font-size: 1.8vw; background: rgba(255,255,255,0.1); padding: 12px 35px; border-radius: 100px; backdrop-filter: blur(10px); border: 1px solid rgba(255,255,255,0.2); }
-        .bombe-ikon { font-size: 15vw; display: none; margin-top: -20px; }
-        .explode { background: radial-gradient(circle, #ff0000, #220000) !important; animation: shake 0.1s infinite !important; }
-        @keyframes shake { 0% { transform: translate(3px, 3px); } 50% { transform: translate(-3px, -3px); } 100% { transform: translate(3px, 3px); } }
+        
+        .wrap { height: 100%; display: flex; flex-direction: column; align-items: center; justify-content: center; text-align: center; }
+        .title { font-size: 7vw; font-weight: 800; text-transform: uppercase; letter-spacing: 10px; text-shadow: 0 10px 30px rgba(0,0,0,0.5); }
+        .time { font-size: 20vw; font-weight: 900; font-variant-numeric: tabular-nums; line-height: 1; margin: 10px 0; }
+        .music-tag { font-size: 2vw; background: rgba(255,255,255,0.1); padding: 10px 40px; border-radius: 50px; backdrop-filter: blur(10px); border: 1px solid rgba(255,255,255,0.2); }
+        
+        .bombe-ikon { font-size: 20vw; display: none; }
+        .explode { background: radial-gradient(circle, #ff0000, #000) !important; animation: shake 0.1s infinite !important; }
+        @keyframes shake { 0% { transform: translate(3px,3px); } 50% { transform: translate(-3px,-3px); } 100% { transform: translate(3px,3px); } }
     </style>
     <script src="https://www.gstatic.com/cast/sdk/libs/caf_receiver/v3/cast_receiver_framework.js"></script>
 </head>
@@ -27,11 +32,8 @@
     <div class="wrap" id="main-wrap">
         <div id="title-display" class="title">KLAR</div>
         <div class="time" id="time">00:00:00</div>
-        <div class="info-container">
-            <div id="sub" style="font-size: 2.2vw; opacity: 0.8; margin-bottom: 15px;">Venter på start...</div>
-            <div id="music-text" class="music-display" style="display:none">🎵 Ingen musikk</div>
-        </div>
-        <div class="bombe-ikon" id="bombe-ikon">💣💥</div>
+        <div id="music-text" class="music-tag" style="display:none">🎵 Musikk</div>
+        <div class="bombe-ikon" id="bombe-ikon">💣</div>
     </div>
 
     <audio id="bg-music" loop crossorigin="anonymous"></audio>
@@ -40,14 +42,11 @@
     <script>
         const ctx = cast.framework.CastReceiverContext.getInstance();
         const playerManager = ctx.getPlayerManager();
-        const state = { target: null, label: "", useExplosion: true, finished: false };
+        const state = { target: null, label: "", finished: false };
 
         function formatHMS(ms) {
-            const totalSec = Math.max(0, Math.floor(ms / 1000));
-            const h = Math.floor(totalSec / 3600);
-            const m = Math.floor((totalSec % 3600) / 60);
-            const s = totalSec % 60;
-            return `${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')}:${String(s).padStart(2, '0')}`;
+            const s = Math.max(0, Math.floor(ms / 1000));
+            return new Date(s * 1000).toISOString().substr(11, 8);
         }
 
         function render() {
@@ -63,51 +62,38 @@
         }
 
         function triggerExplosion() {
-            const music = document.getElementById("bg-music");
-            const boom = document.getElementById("explosion-sound");
-            
-            music.pause();
-            document.getElementById("time").textContent = "00:00:00";
+            document.getElementById("bg-music").pause();
+            document.getElementById("main-wrap").classList.add("explode");
+            document.getElementById("bombe-ikon").style.display = "block";
             document.getElementById("title-display").textContent = "BOOOOM!";
             document.getElementById("music-text").style.display = "none";
-
-            if (state.useExplosion) {
-                document.getElementById("main-wrap").classList.add("explode");
-                document.getElementById("bombe-ikon").style.display = "block";
-                boom.currentTime = 0;
-                boom.play().catch(e => console.error("Bombe-lyd feilet:", e));
-            }
+            document.getElementById("explosion-sound").play().catch(e => console.error(e));
         }
 
         playerManager.setMessageInterceptor(cast.framework.messages.MessageType.LOAD, (data) => {
             const cd = data.customData || {};
             state.target = cd.targetEpoch;
             state.label = cd.label;
-            state.useExplosion = cd.useExplosion;
             state.finished = false;
 
-            const music = document.getElementById("bg-music");
-            const musicLabel = document.getElementById("music-text");
+            // Oppdater farger
+            if (cd.backgroundColors) {
+                const r = document.documentElement;
+                cd.backgroundColors.forEach((c, i) => r.style.setProperty(`--c${i+1}`, c));
+            }
 
+            // Musikk-logikk
+            const music = document.getElementById("bg-music");
             if (cd.musicUrl) {
                 music.src = cd.musicUrl;
                 music.load();
-                music.volume = 1.0;
-
-                // Tving avspilling
-                const playAudio = () => {
-                    music.play().catch(() => {
-                        setTimeout(playAudio, 1000);
-                    });
-                };
-                music.oncanplay = playAudio;
-
-                musicLabel.style.display = "inline-block";
-                const cleanName = cd.musicUrl.split('/').pop().replace('.mp3', '').replace(/_/g, ' ');
-                musicLabel.textContent = "🎵 " + cleanName;
+                const p = () => music.play().catch(() => setTimeout(p, 1000));
+                music.oncanplay = p;
+                document.getElementById("music-text").style.display = "inline-block";
+                document.getElementById("music-text").textContent = "🎵 " + cd.musicUrl.split('/').pop().replace('.mp3', '').replace('_', ' ');
             } else {
                 music.pause();
-                musicLabel.style.display = "none";
+                document.getElementById("music-text").style.display = "none";
             }
 
             document.getElementById("main-wrap").classList.remove("explode");
@@ -115,7 +101,6 @@
             return data;
         });
 
-        // Start receiver og hindre at den sovner
         ctx.start({ disableIdleTimeout: true });
         setInterval(render, 500);
     </script>
