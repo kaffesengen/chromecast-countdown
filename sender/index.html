@@ -8,73 +8,111 @@
   <style>
     * { box-sizing: border-box; }
     body {
-      margin: 0; background: #070A12; color: white; font-family: sans-serif;
-      height: 100vh; display: flex; align-items: center; justify-content: center; padding: 15px;
+      margin: 0; font-family: -apple-system, sans-serif; height: 100vh;
+      display: flex; align-items: center; justify-content: center; padding: 15px;
+      background: linear-gradient(270deg, #070A12, #0B1020, #070A12);
+      background-size: 400% 400%;
+      animation: MovingBg 15s ease infinite;
+      color: white;
     }
+    @keyframes MovingBg {
+      0% { background-position: 0% 50%; }
+      50% { background-position: 100% 50%; }
+      100% { background-position: 0% 50%; }
+    }
+
     .card {
-      background: rgba(255,255,255,.05); border: 1px solid rgba(255,255,255,.1);
-      padding: 25px; border-radius: 20px; width: min(450px, 100%); backdrop-filter: blur(10px);
+      background: rgba(255,255,255,.08); border: 1px solid rgba(255,255,255,.15);
+      padding: 30px; border-radius: 25px; width: min(450px, 100%);
+      backdrop-filter: blur(15px); box-shadow: 0 25px 50px rgba(0,0,0,0.5);
     }
-    .header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; }
-    .cast-btn { width: 35px; height: 35px; cursor: pointer; --disconnected-color: white; --connected-color: #2EE59D; }
+    .header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 25px; }
+    .cast-btn { width: 38px; height: 38px; cursor: pointer; --disconnected-color: white; --connected-color: #2EE59D; }
     
-    label { display: block; font-size: 12px; opacity: 0.7; margin-top: 15px; }
+    label { display: block; font-size: 13px; opacity: 0.8; margin-top: 18px; font-weight: 500; }
     input, select, button { 
-      width: 100%; padding: 12px; margin-top: 5px; border-radius: 10px; 
-      border: 1px solid rgba(255,255,255,.1); background: rgba(0,0,0,.3); color: white; font-size: 16px;
+      width: 100%; padding: 14px; margin-top: 6px; border-radius: 12px; 
+      border: 1px solid rgba(255,255,255,.1); background: rgba(0,0,0,0.4); color: white; font-size: 16px;
     }
     input[type="time"]::-webkit-calendar-picker-indicator { filter: invert(1); }
     
-    button { background: #2b5797; border: none; font-weight: bold; margin-top: 25px; cursor: pointer; }
-    button:hover { background: #3572b0; }
+    .info-box { 
+      background: rgba(46, 229, 157, 0.1); border-left: 4px solid #2EE59D;
+      padding: 12px; margin-top: 20px; font-size: 13px; border-radius: 4px;
+    }
+
+    .btn-start { background: #2b5797; border: none; font-weight: bold; margin-top: 25px; cursor: pointer; transition: 0.2s; }
+    .btn-start:hover { background: #3c78c9; transform: translateY(-2px); }
     
-    .row { display: flex; align-items: center; gap: 10px; margin-top: 15px; cursor: pointer; }
-    .row input { width: auto; margin: 0; }
-    .status { font-size: 12px; margin-top: 20px; color: #2EE59D; font-family: monospace; }
+    .btn-stop { background: rgba(255, 50, 50, 0.2); border: 1px solid rgba(255, 50, 50, 0.5); font-weight: bold; margin-top: 10px; cursor: pointer; color: #ffbcbc; }
+    .btn-stop:hover { background: rgba(255, 50, 50, 0.4); }
+    
+    .status { font-size: 12px; margin-top: 15px; text-align: center; opacity: 0.7; font-family: monospace; }
   </style>
 </head>
 <body>
 
 <div class="card">
   <div class="header">
-    <h2 style="margin:0">TV-Nedtelling</h2>
+    <h2 style="margin:0">Kontrollpanel</h2>
     <google-cast-launcher class="cast-btn"></google-cast-launcher>
   </div>
 
   <label>Hva skjer?</label>
-  <input type="text" id="label" value="Middag">
+  <input type="text" id="label" value="Middag" maxlength="30">
 
-  <label>Når? (24-timers klokke)</label>
+  <label>Måltid (24t)</label>
   <input type="time" id="time" value="18:00">
 
-  <label>Spenningsmusikk</label>
-  <select id="music">
+  <label>Velg musikk fra mappen din</label>
+  <select id="music" onchange="updateMusicInfo()">
     <option value="">Ingen musikk</option>
-    <option value="https://cdn.pixabay.com/audio/2022/03/10/audio_afbd95499a.mp3">Cinematic Pulse</option>
-    <option value="https://cdn.pixabay.com/audio/2024/02/09/audio_4e7f6e6a12.mp3">Tense Background</option>
-    <option value="https://cdn.pixabay.com/audio/2022/01/18/audio_d0a13f69d2.mp3">Suspenseful Action</option>
+    <option value="sounds/chill_morning.mp3">Chill Morning</option>
+    <option value="sounds/morning_vibe.mp3">Morning Vibe</option>
   </select>
 
-  <label class="row">
-    <input type="checkbox" id="explosion" checked>
-    Bruk bombe og sprengelyd
+  <div class="info-box" id="music-info">Valgt musikk: Ingen</div>
+
+  <label style="display: flex; align-items: center; gap: 10px; cursor: pointer; margin-top: 20px;">
+    <input type="checkbox" id="explosion" checked style="width: auto; margin:0;">
+    Aktiver bombe-effekt (bomb.m4a)
   </label>
 
-  <button id="send">SEND TIL TV</button>
-  <div class="status" id="status">Venter på Cast...</div>
+  <button class="btn-start" id="send">START NEDTELLING</button>
+  <button class="btn-stop" id="stop">STOPP ALT</button>
+  
+  <div class="status" id="status">Koble til en enhet for å begynne</div>
 </div>
 
 <script>
   const APP_ID = "088AB566";
   
+  function updateMusicInfo() {
+    const sel = document.getElementById("music");
+    const text = sel.options[sel.selectedIndex].text;
+    document.getElementById("music-info").innerText = "Valgt musikk: " + text;
+  }
+
   window.__onGCastApiAvailable = (available) => {
     if (available) {
       const ctx = cast.framework.CastContext.getInstance();
-      ctx.setOptions({ receiverApplicationId: APP_ID, autoJoinPolicy: chrome.cast.AutoJoinPolicy.ORIGIN_SCOPED });
+      ctx.setOptions({ 
+        receiverApplicationId: APP_ID, 
+        autoJoinPolicy: chrome.cast.AutoJoinPolicy.ORIGIN_SCOPED 
+      });
       ctx.addEventListener(cast.framework.CastContextEventType.SESSION_STATE_CHANGED, () => {
         const s = ctx.getCastState();
-        document.getElementById("status").innerText = s === "CONNECTED" ? "Koblet til TV ✅" : "Klar til å koble til";
+        document.getElementById("status").innerText = s === "CONNECTED" ? "Koblet til TV ✅" : "Søker etter enheter...";
       });
+    }
+  };
+
+  // STOPP-FUNKSJON
+  document.getElementById("stop").onclick = () => {
+    const session = cast.framework.CastContext.getInstance().getCurrentSession();
+    if (session) {
+      session.endSession(true);
+      document.getElementById("status").innerText = "Nedtelling stoppet.";
     }
   };
 
@@ -97,11 +135,12 @@
 
     try {
       await session.loadMedia(loadRequest);
-      document.getElementById("status").innerText = "Nedtelling i gang!";
-    } catch (e) { document.getElementById("status").innerText = "Feil ved start."; }
+      document.getElementById("status").innerText = "Suksess! Nedtelling startet.";
+    } catch (e) { 
+      document.getElementById("status").innerText = "Kunne ikke starte."; 
+    }
   };
 </script>
 
 </body>
 </html>
-
