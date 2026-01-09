@@ -1,78 +1,81 @@
 <!doctype html>
 <html>
-  <head>
+<head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width,initial-scale=1" />
     <title>Countdown Receiver</title>
     <style>
-      html, body { height: 100%; margin: 0; background: #000; color: #fff; font-family: system-ui, sans-serif; }
-      .wrap { height: 100%; display: flex; flex-direction: column; align-items: center; justify-content: center; }
-      .title { font-size: 3.5vw; opacity: 0.85; margin-bottom: 1.5vh; text-align: center; }
-      .time { font-size: 12vw; font-variant-numeric: tabular-nums; letter-spacing: 0.04em; }
-      .sub { margin-top: 2vh; font-size: 2.5vw; opacity: 0.7; text-align: center; }
+        html, body { height: 100%; margin: 0; background: #000; color: #fff; font-family: system-ui, sans-serif; overflow: hidden; }
+        .wrap { height: 100%; display: flex; flex-direction: column; align-items: center; justify-content: center; }
+        .title { font-size: 3.5vw; opacity: 0.85; margin-bottom: 1.5vh; text-align: center; }
+        .time { font-size: 12vw; font-variant-numeric: tabular-nums; letter-spacing: 0.04em; }
+        .sub { margin-top: 2vh; font-size: 2.5vw; opacity: 0.7; text-align: center; }
     </style>
 
-    <!-- Cast Application Framework (CAF) Receiver -->
     <script src="https://www.gstatic.com/cast/sdk/libs/caf_receiver/v3/cast_receiver_framework.js"></script>
-  </head>
-  <body>
+</head>
+<body>
     <div class="wrap">
-      <div class="title" id="title">Nedtelling</div>
-      <div class="time" id="time">--:--:--</div>
-      <div class="sub" id="sub"></div>
+        <div class="title" id="title">Nedtelling</div>
+        <div class="time" id="time">--:--:--</div>
+        <div class="sub" id="sub">Venter på data...</div>
     </div>
 
     <script>
-      const ctx = cast.framework.CastReceiverContext.getInstance();
-      const playerManager = ctx.getPlayerManager();
+        const ctx = cast.framework.CastReceiverContext.getInstance();
+        const playerManager = ctx.getPlayerManager();
 
-      const state = {
-        targetEpochMs: null,
-        label: "Nedtelling",
-      };
+        const state = {
+            targetEpochMs: null,
+            label: "Nedtelling",
+        };
 
-      function pad(n) { return String(n).padStart(2, "0"); }
+        function pad(n) { return String(n).padStart(2, "0"); }
 
-      function formatHMS(ms) {
-        const totalSec = Math.max(0, Math.floor(ms / 1000));
-        const h = Math.floor(totalSec / 3600);
-        const m = Math.floor((totalSec % 3600) / 60);
-        const s = totalSec % 60;
-        return `${pad(h)}:${pad(m)}:${pad(s)}`;
-      }
-
-      function render() {
-        document.getElementById("title").textContent = state.label || "Nedtelling";
-        if (!state.targetEpochMs) {
-          document.getElementById("time").textContent = "--:--:--";
-          document.getElementById("sub").textContent = "Klar til casting…";
-          return;
+        function formatHMS(ms) {
+            const totalSec = Math.max(0, Math.floor(ms / 1000));
+            const h = Math.floor(totalSec / 3600);
+            const m = Math.floor((totalSec % 3600) / 60);
+            const s = totalSec % 60;
+            return `${pad(h)}:${pad(m)}:${pad(s)}`;
         }
-        const now = Date.now();
-        const left = state.targetEpochMs - now;
-        document.getElementById("time").textContent = formatHMS(left);
-        document.getElementById("sub").textContent =
-          left <= 0 ? "Tiden er ute!" : `Til: ${new Date(state.targetEpochMs).toLocaleTimeString()}`;
-      }
 
-      // Ta imot customData fra sender i LOAD-meldingen
-      playerManager.setMessageInterceptor(
-        cast.framework.messages.MessageType.LOAD,
-        (loadRequestData) => {
-          const cd = (loadRequestData && loadRequestData.customData) || {};
-          if (typeof cd.targetEpochMs === "number") state.targetEpochMs = cd.targetEpochMs;
-          if (typeof cd.label === "string") state.label = cd.label;
-          render();
-          return loadRequestData; // viktig: returner requesten videre
+        function render() {
+            document.getElementById("title").textContent = state.label || "Nedtelling";
+            if (!state.targetEpochMs) {
+                document.getElementById("time").textContent = "--:--:--";
+                return;
+            }
+            const now = Date.now();
+            const left = state.targetEpochMs - now;
+            document.getElementById("time").textContent = formatHMS(left);
+            document.getElementById("sub").textContent =
+                left <= 0 ? "Tiden er ute!" : `Mål: ${new Date(state.targetEpochMs).toLocaleTimeString()}`;
         }
-      );
 
-      // Start receiver
-      ctx.start();
+        // VIKTIG: Her fikser vi navnet på variablene så de matcher Sender-koden
+        playerManager.setMessageInterceptor(
+            cast.framework.messages.MessageType.LOAD,
+            (loadRequestData) => {
+                const cd = (loadRequestData && loadRequestData.customData) || {};
+                
+                // Vi sjekker begge varianter for sikkerhets skyld
+                state.targetEpochMs = cd.targetEpoch || cd.targetEpochMs || null;
+                state.label = cd.label || "Nedtelling";
 
-      // Oppdater skjermen hvert 250 ms for smooth nedtelling
-      setInterval(render, 250);
-      render();
+                console.log("Mottok data:", state);
+                render();
+                return loadRequestData;
+            }
+        );
+
+        // Hindrer at Chromecasten skrur av appen fordi den tror den er inaktiv
+        const options = new cast.framework.CastReceiverOptions();
+        options.disableIdleTimeout = true; 
+
+        ctx.start(options);
+
+        setInterval(render, 250);
     </script>
-  </body>
+</body>
 </html>
