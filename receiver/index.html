@@ -2,7 +2,7 @@
 <html>
 <head>
     <meta charset="utf-8" />
-    <title>Countdown Receiver v4 - Sound Fix</title>
+    <title>Countdown Receiver v6</title>
     <style>
         * { box-sizing: border-box; }
         html, body { height: 100%; margin: 0; overflow: hidden; font-family: 'Segoe UI', sans-serif; }
@@ -17,7 +17,7 @@
         .title { font-size: 6vw; font-weight: 800; text-transform: uppercase; letter-spacing: 8px; text-shadow: 0 10px 20px rgba(0,0,0,0.3); }
         .time { font-size: 18vw; font-weight: 900; font-variant-numeric: tabular-nums; margin: 2vh 0; }
         .music-display { font-size: 1.8vw; background: rgba(255,255,255,0.1); padding: 12px 35px; border-radius: 100px; backdrop-filter: blur(10px); border: 1px solid rgba(255,255,255,0.2); }
-        .bombe { font-size: 15vw; display: none; }
+        .bombe-ikon { font-size: 15vw; display: none; margin-top: -20px; }
         .explode { background: radial-gradient(circle, #ff0000, #220000) !important; animation: shake 0.1s infinite !important; }
         @keyframes shake { 0% { transform: translate(3px, 3px); } 50% { transform: translate(-3px, -3px); } 100% { transform: translate(3px, 3px); } }
     </style>
@@ -28,26 +28,19 @@
         <div id="title-display" class="title">KLAR</div>
         <div class="time" id="time">00:00:00</div>
         <div class="info-container">
-            <div id="sub" style="font-size: 2.2vw; opacity: 0.8; margin-bottom: 15px;">Klar til bruk</div>
-            <div id="music-text" class="music-display">🎵 Ingen musikk</div>
+            <div id="sub" style="font-size: 2.2vw; opacity: 0.8; margin-bottom: 15px;">Venter på start...</div>
+            <div id="music-text" class="music-display" style="display:none">🎵 Ingen musikk</div>
         </div>
-        <div class="bombe" id="bombe">💣💥</div>
+        <div class="bombe-ikon" id="bombe-ikon">💣💥</div>
     </div>
 
     <audio id="bg-music" loop crossorigin="anonymous"></audio>
-    <audio id="explosion-sound" crossorigin="anonymous" src="https://cdn.pixabay.com/audio/2022/03/10/audio_f5394d603a.mp3"></audio>
+    <audio id="explosion-sound" crossorigin="anonymous" src="sounds/bomb.m4a"></audio>
 
     <script>
         const ctx = cast.framework.CastReceiverContext.getInstance();
         const playerManager = ctx.getPlayerManager();
         const state = { target: null, label: "", useExplosion: true, finished: false };
-
-        const musicNames = {
-            "https://cdn.pixabay.com/audio/2022/03/10/audio_afbd95499a.mp3": "Cinematic Pulse",
-            "https://cdn.pixabay.com/audio/2024/02/09/audio_4e7f6e6a12.mp3": "Tense Background",
-            "https://cdn.pixabay.com/audio/2022/01/18/audio_d0a13f69d2.mp3": "Suspenseful Action",
-            "https://cdn.pixabay.com/audio/2021/11/22/audio_404cc196c3.mp3": "Clock Ticking"
-        };
 
         function formatHMS(ms) {
             const totalSec = Math.max(0, Math.floor(ms / 1000));
@@ -62,6 +55,7 @@
             const left = state.target - Date.now();
             document.getElementById("title-display").textContent = state.label || "NEDTELLING";
             document.getElementById("time").textContent = formatHMS(left);
+            
             if (left <= 0) {
                 state.finished = true;
                 triggerExplosion();
@@ -69,13 +63,19 @@
         }
 
         function triggerExplosion() {
-            document.getElementById("bg-music").pause();
+            const music = document.getElementById("bg-music");
+            const boom = document.getElementById("explosion-sound");
+            
+            music.pause();
+            document.getElementById("time").textContent = "00:00:00";
+            document.getElementById("title-display").textContent = "BOOOOM!";
+            document.getElementById("music-text").style.display = "none";
+
             if (state.useExplosion) {
                 document.getElementById("main-wrap").classList.add("explode");
-                document.getElementById("bombe").style.display = "block";
-                const boom = document.getElementById("explosion-sound");
+                document.getElementById("bombe-ikon").style.display = "block";
                 boom.currentTime = 0;
-                boom.play().catch(e => console.error("Explosion error:", e));
+                boom.play().catch(e => console.error("Bombe-lyd feilet:", e));
             }
         }
 
@@ -91,31 +91,31 @@
 
             if (cd.musicUrl) {
                 music.src = cd.musicUrl;
-                music.load(); // Tvinger lasting av ny kilde
-                
-                // Denne lytteren venter til filen er klar før den tvinger play
-                music.oncanplay = () => {
-                    music.play().then(() => {
-                        console.log("Musikk startet suksessfullt!");
-                    }).catch(e => {
-                        console.warn("Autoplay blokkert. Prøver igjen om 1 sek.");
-                        setTimeout(() => music.play(), 1000);
+                music.load();
+                music.volume = 1.0;
+
+                // Tving avspilling
+                const playAudio = () => {
+                    music.play().catch(() => {
+                        setTimeout(playAudio, 1000);
                     });
                 };
+                music.oncanplay = playAudio;
 
                 musicLabel.style.display = "inline-block";
-                musicLabel.textContent = "🎵 " + (musicNames[cd.musicUrl] || "Spiller musikk...");
+                const cleanName = cd.musicUrl.split('/').pop().replace('.mp3', '').replace(/_/g, ' ');
+                musicLabel.textContent = "🎵 " + cleanName;
             } else {
                 music.pause();
                 musicLabel.style.display = "none";
             }
 
             document.getElementById("main-wrap").classList.remove("explode");
-            document.getElementById("bombe").style.display = "none";
+            document.getElementById("bombe-ikon").style.display = "none";
             return data;
         });
 
-        // Viktig: Start context med stemme-støtte og inaktivitets-fiks
+        // Start receiver og hindre at den sovner
         ctx.start({ disableIdleTimeout: true });
         setInterval(render, 500);
     </script>
