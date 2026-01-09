@@ -3,131 +3,65 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width,initial-scale=1" />
-  <title>Nedtelling til klokkeslett - Cast</title>
+  <title>Countdown Kontrollpanel</title>
 
   <script src="https://www.gstatic.com/cv/js/sender/v1/cast_sender.js?loadCastFramework=1"></script>
 
-  <script>
-    // 1. Konfigurasjon
-    // const RECEIVER_APP_ID = "CC1AD845"; // Google Default (Bruk denne for feilsøking)
-    const RECEIVER_APP_ID = "088AB566"; // Min egen Countdown App ID
-    const NAMESPACE = "urn:x-cast:no.timer.countdown"; // Bruk samme i receiver
-
-    // 2. Initialisering av Cast Framework
-    window.__onGCastApiAvailable = function(isAvailable) {
-      if (isAvailable) {
-        initializeCastApi();
-      } else {
-        console.error("Cast SDK ikke tilgjengelig. Er du på HTTPS?");
-      }
-    };
-
-    function initializeCastApi() {
-      try {
-        const context = cast.framework.CastContext.getInstance();
-        context.setOptions({
-          receiverApplicationId: RECEIVER_APP_ID,
-          autoJoinPolicy: chrome.cast.AutoJoinPolicy.ORIGIN_SCOPED
-        });
-        console.log("Cast Context initialisert med ID:", RECEIVER_APP_ID);
-      } catch (e) {
-        console.error("Feil under initialisering av Cast:", e);
-      }
-    }
-  </script>
-
   <style>
-    /* VIKTIG: Sikrer at padding og rammer ikke gjør elementene bredere enn 100% */
-    * {
-      box-sizing: border-box;
-    }
-
+    * { box-sizing: border-box; }
     :root {
       --bg0: #070A12; --bg1: #0B1020; --text: rgba(255,255,255,.92);
-      --muted: rgba(255,255,255,.68); --ok: #2EE59D; --warn: #FFB020;
+      --muted: rgba(255,255,255,.68); --ok: #2EE59D; --accent: #2b5797;
       --radius: 18px; --stroke: rgba(255,255,255,.16);
     }
 
     body {
-      margin: 0; 
-      background: linear-gradient(180deg, var(--bg0), var(--bg1));
-      color: var(--text); 
-      font-family: sans-serif; 
-      height: 100vh;
-      display: flex; 
-      align-items: center; 
-      justify-content: center;
-      padding: 10px;
+      margin: 0; background: linear-gradient(180deg, var(--bg0), var(--bg1));
+      color: var(--text); font-family: -apple-system, sans-serif;
+      min-height: 100vh; display: flex; align-items: center; justify-content: center;
+      padding: 20px;
     }
 
     .card {
-      background: rgba(255,255,255,.05); 
-      border: 1px solid var(--stroke);
-      padding: 24px; 
-      border-radius: var(--radius); 
-      width: min(500px, 100%);
-      backdrop-filter: blur(10px);
-      box-shadow: 0 10px 30px rgba(0,0,0,0.3);
+      background: rgba(255,255,255,.05); border: 1px solid var(--stroke);
+      padding: 24px; border-radius: var(--radius); width: min(450px, 100%);
+      backdrop-filter: blur(15px); box-shadow: 0 20px 40px rgba(0,0,0,0.4);
     }
 
-    .header { 
-      display: flex; 
-      justify-content: space-between; 
-      align-items: flex-start; 
-      margin-bottom: 20px; 
-    }
-
+    .header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 25px; }
+    
     .cast-btn { 
-      --disconnected-color: white; 
-      --connected-color: var(--ok); 
-      width: 32px; 
-      height: 32px; 
-      cursor: pointer;
+      --disconnected-color: white; --connected-color: var(--ok); 
+      width: 32px; height: 32px; cursor: pointer;
     }
 
-    input, button { 
-      width: 100%; 
-      padding: 12px; 
-      margin-top: 8px; 
-      border-radius: 10px; 
-      border: 1px solid var(--stroke); 
-      background: rgba(0,0,0,0.3); 
-      color: white;
-      font-size: 16px;
-      display: block;
+    label { display: block; font-size: 13px; color: var(--muted); margin-top: 16px; margin-bottom: 4px; }
+
+    input, select, button { 
+      width: 100%; padding: 14px; border-radius: 12px; 
+      border: 1px solid var(--stroke); background: rgba(0,0,0,0.3); 
+      color: white; font-size: 16px; outline: none;
     }
 
-    /* GJØR KLOKKE-IKONET HVITT */
-    input[type="time"]::-webkit-calendar-picker-indicator {
-      filter: invert(1);
-      cursor: pointer;
+    input[type="time"]::-webkit-calendar-picker-indicator { filter: invert(1); cursor: pointer; }
+
+    .checkbox-row {
+      display: flex; align-items: center; gap: 10px; margin-top: 20px; cursor: pointer;
     }
+    .checkbox-row input { width: auto; margin: 0; cursor: pointer; }
 
     button { 
-      background: #2b5797; 
-      cursor: pointer; 
-      font-weight: bold; 
-      border: none; 
-      transition: background 0.2s;
+      background: var(--accent); border: none; font-weight: bold; 
+      margin-top: 25px; cursor: pointer; transition: transform 0.1s, background 0.2s;
     }
-
+    button:active { transform: scale(0.98); }
     button:hover { background: #3572b0; }
 
     .status-area { 
-      font-size: 12px; 
-      margin-top: 15px; 
-      padding: 10px; 
-      border-radius: 8px; 
-      background: rgba(255,255,255,.05); 
-      border: 1px solid var(--stroke);
+      font-size: 12px; margin-top: 20px; padding: 12px; 
+      border-radius: 10px; background: rgba(0,0,0,0.2); border: 1px solid var(--stroke);
     }
-
-    .mono { font-family: monospace; }
-    
-    label {
-      display: block;
-      margin-top: 15px;
-    }
+    .mono { font-family: monospace; color: var(--ok); }
   </style>
 </head>
 
@@ -135,86 +69,97 @@
 
 <div class="card">
   <div class="header">
-    <div>
-      <h2 style="margin:0">Nedtelling</h2>
-      <div style="font-size:12px; color:var(--muted)">Send til TV-en din</div>
-    </div>
+    <h2 style="margin:0; font-size: 22px;">Nedtelling</h2>
     <google-cast-launcher class="cast-btn"></google-cast-launcher>
   </div>
 
-  <label style="font-size:12px; margin-top:0;">Hva skal skje?</label>
-  <input type="text" id="input_task_label" value="Skole" placeholder="Eks: Middag">
+  <label>Hva skal skje?</label>
+  <input type="text" id="input_label" value="Skole" placeholder="Eks: Middag">
 
-  <label style="font-size:12px;">Når?</label>
-  <input type="time" id="input_task_time" value="07:45">
+  <label>Når skal det skje? (24t)</label>
+  <input type="time" id="input_time" value="07:45">
+
+  <label>Velg spenningsmusikk</label>
+  <select id="select_music">
+    <option value="">Ingen musikk</option>
+    <option value="https://www.soundhelix.com/examples/mp3/SoundHelix-Song-1.mp3">Spenningsmusikk 1 (Test)</option>
+    <option value="https://www.soundhelix.com/examples/mp3/SoundHelix-Song-2.mp3">Spenningsmusikk 2 (Test)</option>
+  </select>
+
+  <label class="checkbox-row">
+    <input type="checkbox" id="check_explosion" checked>
+    <span>Aktiver bombe-eksplosjon når ferdig</span>
+  </label>
 
   <button id="btn_send">Start på TV</button>
 
-  <div class="status-area" id="status_box">
+  <div class="status-area">
     Status: <span id="txt_status" class="mono">Venter på tilkobling...</span>
   </div>
 </div>
 
 <script>
   const $ = (id) => document.getElementById(id);
-  
-  const labelInput = $("input_task_label");
-  const timeInput = $("input_task_time");
-  const sendBtn = $("btn_send");
-  const statusTxt = $("txt_status");
+  const APP_ID = "088AB566";
 
-  function updateCastStatus() {
+  // Initialisering
+  window.__onGCastApiAvailable = (isAvailable) => {
+    if (isAvailable) {
+      const context = cast.framework.CastContext.getInstance();
+      context.setOptions({
+        receiverApplicationId: APP_ID,
+        autoJoinPolicy: chrome.cast.AutoJoinPolicy.ORIGIN_SCOPED
+      });
+      
+      context.addEventListener(cast.framework.CastContextEventType.SESSION_STATE_CHANGED, () => {
+        const state = context.getCastState();
+        const statusMap = {
+          "NO_DEVICES_AVAILABLE": "Ingen TV funnet",
+          "NOT_CONNECTED": "Klar til å koble til",
+          "CONNECTING": "Kobler til...",
+          "CONNECTED": "Koblet til TV ✅"
+        };
+        $("txt_status").innerText = statusMap[state] || state;
+      });
+    }
+  };
+
+  $("btn_send").onclick = async () => {
     const context = cast.framework.CastContext.getInstance();
-    const state = context.getCastState();
-    
-    if (state === "NO_DEVICES_AVAILABLE") statusTxt.innerText = "Ingen TV funnet (Sjekk WiFi/Serienummer)";
-    else if (state === "NOT_CONNECTED") statusTxt.innerText = "Klar til å koble til";
-    else if (state === "CONNECTING") statusTxt.innerText = "Kobler til...";
-    else if (state === "CONNECTED") statusTxt.innerText = "Koblet til TV ✅";
-  }
-
-  setTimeout(() => {
-    const ctx = cast.framework.CastContext.getInstance();
-    ctx.addEventListener(cast.framework.CastContextEventType.SESSION_STATE_CHANGED, updateCastStatus);
-    updateCastStatus();
-  }, 1000);
-
-  sendBtn.onclick = async () => {
-    const session = cast.framework.CastContext.getInstance().getCurrentSession();
+    const session = context.getCurrentSession();
     
     if (!session) {
-      alert("Du må koble til TV-en først ved å trykke på Cast-ikonet!");
+      alert("Trykk på Cast-ikonet først!");
       return;
     }
 
-    const label = labelInput.value;
-    const timeVal = timeInput.value;
-    
-    const [h, m] = timeVal.split(":").map(Number);
-    const targetDate = new Date();
-    targetDate.setHours(h, m, 0, 0);
-    if (targetDate < new Date()) targetDate.setDate(targetDate.getDate() + 1);
+    // Beregn måltid
+    const [h, m] = $("input_time").value.split(":").map(Number);
+    const target = new Date();
+    target.setHours(h, m, 0, 0);
+    if (target < new Date()) target.setDate(target.getDate() + 1);
 
     const payload = {
       type: "START_COUNTDOWN",
-      label: label,
-      targetEpoch: targetDate.getTime()
+      label: $("input_label").value,
+      targetEpoch: target.getTime(),
+      musicUrl: $("select_music").value,
+      useExplosion: $("check_explosion").checked
     };
 
-    const mediaInfo = new chrome.cast.media.MediaInfo("countdown_id", "application/x-cast-countdown");
+    const mediaInfo = new chrome.cast.media.MediaInfo("countdown", "application/x-cast-countdown");
     const request = new chrome.cast.media.LoadRequest(mediaInfo);
     request.customData = payload;
 
     try {
       await session.loadMedia(request);
-      statusTxt.innerText = "Nedtelling startet!";
+      $("txt_status").innerText = "Sendt til TV!";
     } catch (e) {
-      console.error("Feil ved sending:", e);
-      statusTxt.innerText = "Feil: Kunne ikke starte på TV.";
+      console.error(e);
+      $("txt_status").innerText = "Feil ved sending.";
     }
   };
 </script>
 
 </body>
 </html>
-
