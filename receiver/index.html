@@ -2,80 +2,84 @@
 <html>
 <head>
     <meta charset="utf-8" />
-    <meta name="viewport" content="width=device-width,initial-scale=1" />
-    <title>Countdown Receiver</title>
+    <title>Countdown Receiver v2</title>
     <style>
-        html, body { height: 100%; margin: 0; background: #000; color: #fff; font-family: system-ui, sans-serif; overflow: hidden; }
-        .wrap { height: 100%; display: flex; flex-direction: column; align-items: center; justify-content: center; }
-        .title { font-size: 3.5vw; opacity: 0.85; margin-bottom: 1.5vh; text-align: center; }
-        .time { font-size: 12vw; font-variant-numeric: tabular-nums; letter-spacing: 0.04em; }
-        .sub { margin-top: 2vh; font-size: 2.5vw; opacity: 0.7; text-align: center; }
+        html, body { height: 100%; margin: 0; background: #000; color: #fff; font-family: sans-serif; overflow: hidden; }
+        .wrap { height: 100%; display: flex; flex-direction: column; align-items: center; justify-content: center; transition: background 0.5s; }
+        .time { font-size: 15vw; font-weight: bold; font-variant-numeric: tabular-nums; }
+        .bombe { font-size: 10vw; margin-top: 20px; display: none; }
+        .explode { background: radial-gradient(circle, #ff4d4d, #000) !important; animation: shake 0.2s infinite; }
+        @keyframes shake { 0% { transform: translate(1px, 1px); } 50% { transform: translate(-2px, -1px); } 100% { transform: translate(1px, 1px); } }
     </style>
-
     <script src="https://www.gstatic.com/cast/sdk/libs/caf_receiver/v3/cast_receiver_framework.js"></script>
 </head>
 <body>
-    <div class="wrap">
-        <div class="title" id="title">Nedtelling</div>
-        <div class="time" id="time">--:--:--</div>
-        <div class="sub" id="sub">Venter på data...</div>
+    <div class="wrap" id="main-wrap">
+        <div id="title" style="font-size: 4vw; opacity: 0.8;">Venter...</div>
+        <div class="time" id="time">00:00:00</div>
+        <div id="sub" style="font-size: 2vw;">Koble til for å starte</div>
+        <div class="bombe" id="bombe">💣💥</div>
     </div>
+
+    <audio id="bg-music" loop></audio>
+    <audio id="explosion-sound"></audio>
 
     <script>
         const ctx = cast.framework.CastReceiverContext.getInstance();
         const playerManager = ctx.getPlayerManager();
-
-        const state = {
-            targetEpochMs: null,
-            label: "Nedtelling",
-        };
-
-        function pad(n) { return String(n).padStart(2, "0"); }
-
-        function formatHMS(ms) {
-            const totalSec = Math.max(0, Math.floor(ms / 1000));
-            const h = Math.floor(totalSec / 3600);
-            const m = Math.floor((totalSec % 3600) / 60);
-            const s = totalSec % 60;
-            return `${pad(h)}:${pad(m)}:${pad(s)}`;
-        }
+        const state = { target: null, label: "", useExplosion: true, musicUrl: "" };
 
         function render() {
-            document.getElementById("title").textContent = state.label || "Nedtelling";
-            if (!state.targetEpochMs) {
-                document.getElementById("time").textContent = "--:--:--";
-                return;
-            }
+            if (!state.target) return;
             const now = Date.now();
-            const left = state.targetEpochMs - now;
+            const left = state.target - now;
+
+            // 24-timers format (Norge)
+            const timeStr = new Date(state.target).toLocaleTimeString('no-NO', { hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: false });
+            
             document.getElementById("time").textContent = formatHMS(left);
-            document.getElementById("sub").textContent =
-                left <= 0 ? "Tiden er ute!" : `Mål: ${new Date(state.targetEpochMs).toLocaleTimeString()}`;
+            document.getElementById("sub").textContent = `Mål: ${timeStr}`;
+
+            if (left <= 0) {
+                triggerExplosion();
+            }
         }
 
-        // VIKTIG: Her fikser vi navnet på variablene så de matcher Sender-koden
-        playerManager.setMessageInterceptor(
-            cast.framework.messages.MessageType.LOAD,
-            (loadRequestData) => {
-                const cd = (loadRequestData && loadRequestData.customData) || {};
-                
-                // Vi sjekker begge varianter for sikkerhets skyld
-                state.targetEpochMs = cd.targetEpoch || cd.targetEpochMs || null;
-                state.label = cd.label || "Nedtelling";
+        function formatHMS(ms) {
+            const s = Math.max(0, Math.floor(ms / 1000));
+            return new Date(s * 1000).toISOString().substr(11, 8);
+        }
 
-                console.log("Mottok data:", state);
-                render();
-                return loadRequestData;
+        function triggerExplosion() {
+            if (state.useExplosion) {
+                document.getElementById("main-wrap").classList.add("explode");
+                document.getElementById("bombe").style.display = "block";
+                document.getElementById("bg-music").pause();
+                document.getElementById("explosion-sound").play().catch(() => {});
             }
-        );
+        }
 
-        // Hindrer at Chromecasten skrur av appen fordi den tror den er inaktiv
-        const options = new cast.framework.CastReceiverOptions();
-        options.disableIdleTimeout = true; 
+        playerManager.setMessageInterceptor(cast.framework.messages.MessageType.LOAD, (data) => {
+            const cd = data.customData || {};
+            state.target = cd.targetEpoch;
+            state.label = cd.label;
+            state.useExplosion = cd.useExplosion;
+            
+            const music = document.getElementById("bg-music");
+            if (cd.musicUrl) {
+                music.src = cd.musicUrl;
+                music.play().catch(e => console.log("Musikk blokkert før interaksjon"));
+            } else {
+                music.pause();
+            }
 
-        ctx.start(options);
+            document.getElementById("main-wrap").classList.remove("explode");
+            document.getElementById("bombe").style.display = "none";
+            return data;
+        });
 
-        setInterval(render, 250);
+        ctx.start();
+        setInterval(render, 500);
     </script>
 </body>
 </html>
