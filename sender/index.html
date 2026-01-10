@@ -3,89 +3,59 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width,initial-scale=1" />
-  <title>Premium Countdown Control</title>
+  <title>Countdown Kontroll</title>
   <script src="https://www.gstatic.com/cv/js/sender/v1/cast_sender.js?loadCastFramework=1"></script>
   <style>
-    :root {
-      --accent: #2EE59D;
-      --bg-gradient: linear-gradient(135deg, #070A12 0%, #0B1020 100%);
-      --glass: rgba(255, 255, 255, 0.06);
-      --glass-border: rgba(255, 255, 255, 0.12);
-    }
-
-    * { box-sizing: border-box; transition: all 0.3s cubic-bezier(0.25, 0.8, 0.25, 1); }
-
+    * { box-sizing: border-box; }
     body {
-      margin: 0; font-family: 'Inter', -apple-system, sans-serif;
-      height: 100vh; display: flex; align-items: center; justify-content: center;
-      background: var(--bg-gradient); color: white; overflow: hidden;
+      margin: 0; font-family: -apple-system, sans-serif; height: 100vh;
+      display: flex; align-items: center; justify-content: center; padding: 15px;
+      background: #070A12; color: white;
     }
-
-    /* Dynamisk bakgrunnslys som endres ved fargevalg */
-    .glow-overlay {
-      position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%);
-      width: 100vw; height: 100vh; z-index: -1;
-      background: radial-gradient(circle at center, rgba(46, 229, 157, 0.05) 0%, transparent 70%);
-      opacity: 0.5;
-    }
-
     .card {
-      background: var(--glass); border: 1px solid var(--glass-border);
-      padding: 40px; border-radius: 32px; width: min(480px, 95%);
-      backdrop-filter: blur(20px); box-shadow: 0 40px 100px rgba(0,0,0,0.6);
+      background: rgba(255,255,255,.05); border: 1px solid rgba(255,255,255,.1);
+      padding: 30px; border-radius: 25px; width: min(450px, 100%);
+      backdrop-filter: blur(15px); box-shadow: 0 20px 40px rgba(0,0,0,0.4);
     }
-
-    .header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 30px; }
+    .header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; }
+    .cast-btn { width: 35px; height: 35px; cursor: pointer; --disconnected-color: white; --connected-color: #2EE59D; }
     
-    /* Chromecast Ikon respons */
-    google-cast-launcher {
-      width: 40px; height: 40px; cursor: pointer;
-      filter: drop-shadow(0 0 0px var(--accent));
+    label { display: block; font-size: 12px; opacity: 0.6; margin-top: 15px; font-weight: 600; text-transform: uppercase; }
+    input, select, button { 
+      width: 100%; padding: 12px; margin-top: 6px; border-radius: 12px; 
+      border: 1px solid rgba(255,255,255,.1); background: rgba(0,0,0,0.3); color: white; font-size: 16px;
     }
-    google-cast-launcher:hover { transform: scale(1.1) rotate(5deg); filter: drop-shadow(0 0 10px white); }
+    input[type="time"]::-webkit-calendar-picker-indicator { filter: invert(1); }
 
-    label { display: block; font-size: 11px; opacity: 0.5; margin-top: 20px; font-weight: 700; text-transform: uppercase; letter-spacing: 1.5px; }
-
-    input, select {
-      width: 100%; padding: 14px; margin-top: 8px; border-radius: 14px;
-      border: 1px solid var(--glass-border); background: rgba(0,0,0,0.2);
-      color: white; font-size: 16px; outline: none;
-    }
-    input:focus, select:focus { border-color: var(--accent); background: rgba(0,0,0,0.4); box-shadow: 0 0 20px rgba(46, 229, 157, 0.1); }
-
-    /* Polerte fargevelgere */
-    .theme-row { display: flex; justify-content: space-between; margin-top: 15px; background: rgba(0,0,0,0.2); padding: 15px; border-radius: 20px; }
+    /* Farge-preview styling */
+    .color-section { display: flex; align-items: center; gap: 20px; margin-top: 10px; }
+    .theme-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 10px; }
     .theme-dot {
-      width: 44px; height: 44px; border-radius: 50%; cursor: pointer;
-      border: 3px solid transparent; position: relative;
+      width: 40px; height: 40px; border-radius: 10px; cursor: pointer;
+      border: 2px solid rgba(255,255,255,0.1); transition: 0.2s;
     }
-    .theme-dot:hover { transform: scale(1.15); box-shadow: 0 0 20px rgba(255,255,255,0.2); }
-    .theme-dot:active { transform: scale(0.9); }
-    .theme-dot.active { border-color: white; box-shadow: 0 0 25px rgba(255,255,255,0.3); }
-    .theme-dot.active::after { content: '✓'; position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); color: white; font-size: 12px; }
-
-    .btn-start {
-      background: var(--accent); color: #070A12; border: none; font-weight: 800;
-      margin-top: 35px; cursor: pointer; font-size: 16px; text-transform: uppercase; letter-spacing: 1px;
-      padding: 18px; border-radius: 16px; box-shadow: 0 10px 20px rgba(46, 229, 157, 0.2);
+    .theme-dot.active { border-color: #2EE59D; transform: scale(1.05); }
+    .preview-box {
+      flex-grow: 1; height: 90px; border-radius: 15px;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 11px; font-weight: bold; text-transform: uppercase; letter-spacing: 1px;
+      border: 1px solid rgba(255,255,255,0.2); transition: background 0.5s ease;
     }
-    .btn-start:hover { transform: translateY(-3px); box-shadow: 0 15px 30px rgba(46, 229, 157, 0.4); background: #3ef7b0; }
-    .btn-start:active { transform: translateY(1px); }
 
-    #status { font-size: 11px; text-align: center; margin-top: 20px; opacity: 0.4; letter-spacing: 0.5px; }
+    .btn-start { background: #2b5797; border: none; font-weight: bold; margin-top: 25px; cursor: pointer; }
+    .btn-stop { background: rgba(255, 50, 50, 0.1); border: 1px solid rgba(255, 50, 50, 0.3); margin-top: 10px; cursor: pointer; color: #ffbcbc; font-size: 14px; }
+    .status { font-size: 11px; margin-top: 15px; text-align: center; opacity: 0.5; font-family: monospace; }
   </style>
 </head>
 <body>
 
-<div class="glow-overlay" id="glow"></div>
-
 <div class="card">
   <div class="header">
-    <h2 style="margin:0; font-weight: 800; letter-spacing: -0.5px;">Cast Control</h2>
-    <google-cast-launcher></google-cast-launcher>
+    <h2 style="margin:0; font-size: 20px;">Kontrollpanel</h2>
+    <google-cast-launcher class="cast-btn"></google-cast-launcher>
   </div>
 
-  <label>Tittel på TV</label>
+  <label>Tekst på TV</label>
   <input type="text" id="label" value="Middag">
 
   <label>Tidspunkt</label>
@@ -94,26 +64,29 @@
   <label>Musikk</label>
   <select id="music">
     <option value="">Ingen musikk</option>
-    <option value="https://kaffesengen.github.io/chromecast-countdown/sounds/chill_morning.m4a">Chill Morning</option>
-    <option value="https://kaffesengen.github.io/chromecast-countdown/sounds/morning_vibe.m4a">Morning Vibe</option>
+    <option value="https://kaffesengen.github.io/chromecast-countdown/sounds/chill_morning.mp3">Chill Morning</option>
+    <option value="https://kaffesengen.github.io/chromecast-countdown/sounds/morning_vibe.mp3">Morning Vibe</option>
   </select>
 
-  <label>Velg Atmosfære</label>
-  <div class="theme-row">
-    <div class="theme-dot active" style="background: linear-gradient(135deg, #051937, #00bf72);" onclick="setTheme('nordlys', this, '#00bf72')"></div>
-    <div class="theme-dot" style="background: linear-gradient(135deg, #ee0979, #ff6a00);" onclick="setTheme('sunset', this, '#ff6a00')"></div>
-    <div class="theme-dot" style="background: linear-gradient(135deg, #021b79, #0575e6);" onclick="setTheme('ocean', this, '#0575e6')"></div>
-    <div class="theme-dot" style="background: linear-gradient(135deg, #232526, #434343);" onclick="setTheme('dark', this, '#ffffff')"></div>
+  <label>Fargetema (Preview)</label>
+  <div class="color-section">
+    <div class="theme-grid">
+      <div class="theme-dot active" style="background: linear-gradient(135deg, #051937, #00bf72);" onclick="setTheme('nordlys', this)"></div>
+      <div class="theme-dot" style="background: linear-gradient(135deg, #ee0979, #ff6a00);" onclick="setTheme('sunset', this)"></div>
+      <div class="theme-dot" style="background: linear-gradient(135deg, #021b79, #0575e6);" onclick="setTheme('ocean', this)"></div>
+      <div class="theme-dot" style="background: linear-gradient(135deg, #232526, #434343);" onclick="setTheme('dark', this)"></div>
+    </div>
+    <div id="preview" class="preview-box" style="background: linear-gradient(-45deg, #051937, #004d7a, #008793, #00bf72);">TV-Bakgrunn</div>
   </div>
 
-  <button class="btn-start" id="send">Start Nedtelling</button>
-  <div id="status">Klar til å koble til</div>
+  <button class="btn-start" id="send">START PÅ TV</button>
+  <button class="btn-stop" id="stop">STOPP</button>
+  <div class="status" id="status">Koble til TV for å starte</div>
 </div>
 
 <script>
   const APP_ID = "088AB566";
   let selectedColors = ["#051937", "#004d7a", "#008793", "#00bf72"];
-  
   const themes = {
     nordlys: ["#051937", "#004d7a", "#008793", "#00bf72"],
     sunset: ["#ee0979", "#ff6a00", "#f42f4b", "#ff9068"],
@@ -121,22 +94,27 @@
     dark: ["#232526", "#414345", "#000000", "#434343"]
   };
 
-  function setTheme(t, el, accentColor) {
+  function setTheme(t, el) {
     selectedColors = themes[t];
     document.querySelectorAll('.theme-dot').forEach(d => d.classList.remove('active'));
     el.classList.add('active');
-    
-    // Oppdater hele appens glød-atmosfære
-    document.getElementById('glow').style.background = `radial-gradient(circle at center, ${accentColor}1a 0%, transparent 70%)`;
+    document.getElementById('preview').style.background = `linear-gradient(-45deg, ${selectedColors.join(',')})`;
   }
 
   window.__onGCastApiAvailable = (available) => {
     if (available) {
-      cast.framework.CastContext.getInstance().setOptions({
-        receiverApplicationId: APP_ID,
-        autoJoinPolicy: chrome.cast.AutoJoinPolicy.ORIGIN_SCOPED
+      const ctx = cast.framework.CastContext.getInstance();
+      ctx.setOptions({ receiverApplicationId: APP_ID, autoJoinPolicy: chrome.cast.AutoJoinPolicy.ORIGIN_SCOPED });
+      ctx.addEventListener(cast.framework.CastContextEventType.SESSION_STATE_CHANGED, () => {
+        const s = ctx.getCastState();
+        document.getElementById("status").innerText = s === "CONNECTED" ? "Tilkoblet ✅" : "Søker etter TV...";
       });
     }
+  };
+
+  document.getElementById("stop").onclick = () => {
+    const s = cast.framework.CastContext.getInstance().getCurrentSession();
+    if (s) s.endSession(true);
   };
 
   document.getElementById("send").onclick = async () => {
@@ -144,7 +122,8 @@
     if (!session) return alert("Koble til TV først!");
 
     const [h, m] = document.getElementById("time").value.split(":").map(Number);
-    const target = new Date(); target.setHours(h, m, 0, 0);
+    const target = new Date();
+    target.setHours(h, m, 0, 0);
     if (target < new Date()) target.setDate(target.getDate() + 1);
 
     const loadRequest = new chrome.cast.media.LoadRequest(new chrome.cast.media.MediaInfo("count", "application/x-cast"));
@@ -155,7 +134,6 @@
       backgroundColors: selectedColors
     };
     await session.loadMedia(loadRequest);
-    document.getElementById("status").innerText = "Overført til TV ✅";
   };
 </script>
 </body>
