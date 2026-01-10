@@ -12,6 +12,7 @@
       --glass-heavy: rgba(255, 255, 255, 0.2);
       --border: rgba(255, 255, 255, 0.2);
       --text: #ffffff;
+      --fallback-bg: #1A1A2E; /* Ny fallback-farge */
     }
 
     * { box-sizing: border-box; transition: all 0.4s cubic-bezier(0.165, 0.84, 0.44, 1); }
@@ -19,7 +20,8 @@
     body {
       margin: 0; font-family: 'SF Pro Display', -apple-system, sans-serif;
       height: 100vh; display: flex; align-items: center; justify-content: center;
-      background: url('background.jpg') no-repeat center center fixed;
+      /* Bruker nå relativ sti, og fallback til fallback-bg hvis bildet ikke lastes */
+      background: var(--fallback-bg) url('background.jpg') no-repeat center center fixed;
       background-size: cover; color: var(--text); overflow: hidden;
     }
 
@@ -175,4 +177,3 @@
 </script>
 </body>
 </html>
-
