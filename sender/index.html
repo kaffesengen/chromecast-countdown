@@ -3,67 +3,137 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width,initial-scale=1" />
-  <title>Bombe Kontroll</title>
+  <title>Premium Countdown Control</title>
   <script src="https://www.gstatic.com/cv/js/sender/v1/cast_sender.js?loadCastFramework=1"></script>
   <style>
-    * { box-sizing: border-box; }
-    body { margin: 0; font-family: sans-serif; background: #070A12; color: white; display: flex; align-items: center; justify-content: center; height: 100vh; }
-    .card { background: rgba(255,255,255,.05); padding: 30px; border-radius: 25px; width: min(400px, 95%); border: 1px solid rgba(255,255,255,.1); }
-    .header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; }
-    label { display: block; font-size: 11px; opacity: 0.6; margin-top: 15px; text-transform: uppercase; font-weight: bold; }
-    input, select, button { width: 100%; padding: 12px; margin-top: 5px; border-radius: 10px; border: 1px solid rgba(255,255,255,.1); background: rgba(0,0,0,0.3); color: white; font-size: 16px; }
-    .btn-start { background: #2b5797; border: none; font-weight: bold; margin-top: 20px; cursor: pointer; }
-    .btn-stop { background: none; border: 1px solid #ff4444; color: #ff4444; margin-top: 10px; cursor: pointer; }
-    #clock { font-family: monospace; font-size: 20px; text-align: center; margin-bottom: 10px; color: #2EE59D; }
-    .theme-grid { display: flex; gap: 10px; margin-top: 5px; }
-    .theme-btn { flex: 1; height: 30px; border-radius: 5px; border: 1px solid rgba(255,255,255,0.2); cursor: pointer; }
+    :root {
+      --accent: #2EE59D;
+      --bg-gradient: linear-gradient(135deg, #070A12 0%, #0B1020 100%);
+      --glass: rgba(255, 255, 255, 0.06);
+      --glass-border: rgba(255, 255, 255, 0.12);
+    }
+
+    * { box-sizing: border-box; transition: all 0.3s cubic-bezier(0.25, 0.8, 0.25, 1); }
+
+    body {
+      margin: 0; font-family: 'Inter', -apple-system, sans-serif;
+      height: 100vh; display: flex; align-items: center; justify-content: center;
+      background: var(--bg-gradient); color: white; overflow: hidden;
+    }
+
+    /* Dynamisk bakgrunnslys som endres ved fargevalg */
+    .glow-overlay {
+      position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%);
+      width: 100vw; height: 100vh; z-index: -1;
+      background: radial-gradient(circle at center, rgba(46, 229, 157, 0.05) 0%, transparent 70%);
+      opacity: 0.5;
+    }
+
+    .card {
+      background: var(--glass); border: 1px solid var(--glass-border);
+      padding: 40px; border-radius: 32px; width: min(480px, 95%);
+      backdrop-filter: blur(20px); box-shadow: 0 40px 100px rgba(0,0,0,0.6);
+    }
+
+    .header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 30px; }
+    
+    /* Chromecast Ikon respons */
+    google-cast-launcher {
+      width: 40px; height: 40px; cursor: pointer;
+      filter: drop-shadow(0 0 0px var(--accent));
+    }
+    google-cast-launcher:hover { transform: scale(1.1) rotate(5deg); filter: drop-shadow(0 0 10px white); }
+
+    label { display: block; font-size: 11px; opacity: 0.5; margin-top: 20px; font-weight: 700; text-transform: uppercase; letter-spacing: 1.5px; }
+
+    input, select {
+      width: 100%; padding: 14px; margin-top: 8px; border-radius: 14px;
+      border: 1px solid var(--glass-border); background: rgba(0,0,0,0.2);
+      color: white; font-size: 16px; outline: none;
+    }
+    input:focus, select:focus { border-color: var(--accent); background: rgba(0,0,0,0.4); box-shadow: 0 0 20px rgba(46, 229, 157, 0.1); }
+
+    /* Polerte fargevelgere */
+    .theme-row { display: flex; justify-content: space-between; margin-top: 15px; background: rgba(0,0,0,0.2); padding: 15px; border-radius: 20px; }
+    .theme-dot {
+      width: 44px; height: 44px; border-radius: 50%; cursor: pointer;
+      border: 3px solid transparent; position: relative;
+    }
+    .theme-dot:hover { transform: scale(1.15); box-shadow: 0 0 20px rgba(255,255,255,0.2); }
+    .theme-dot:active { transform: scale(0.9); }
+    .theme-dot.active { border-color: white; box-shadow: 0 0 25px rgba(255,255,255,0.3); }
+    .theme-dot.active::after { content: '✓'; position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); color: white; font-size: 12px; }
+
+    .btn-start {
+      background: var(--accent); color: #070A12; border: none; font-weight: 800;
+      margin-top: 35px; cursor: pointer; font-size: 16px; text-transform: uppercase; letter-spacing: 1px;
+      padding: 18px; border-radius: 16px; box-shadow: 0 10px 20px rgba(46, 229, 157, 0.2);
+    }
+    .btn-start:hover { transform: translateY(-3px); box-shadow: 0 15px 30px rgba(46, 229, 157, 0.4); background: #3ef7b0; }
+    .btn-start:active { transform: translateY(1px); }
+
+    #status { font-size: 11px; text-align: center; margin-top: 20px; opacity: 0.4; letter-spacing: 0.5px; }
   </style>
 </head>
 <body>
 
+<div class="glow-overlay" id="glow"></div>
+
 <div class="card">
-  <div id="clock">00:00:00</div>
   <div class="header">
-    <h2 style="margin:0">Bombe-Timer</h2>
-    <google-cast-launcher style="width:35px;height:35px"></google-cast-launcher>
+    <h2 style="margin:0; font-weight: 800; letter-spacing: -0.5px;">Cast Control</h2>
+    <google-cast-launcher></google-cast-launcher>
   </div>
 
-  <label>Tittel</label>
-  <input type="text" id="label" value="BOMBEN GÅR AV!">
+  <label>Tittel på TV</label>
+  <input type="text" id="label" value="Middag">
 
-  <label>Tidspunkt (Norsk tid)</label>
+  <label>Tidspunkt</label>
   <input type="time" id="time" value="18:00">
 
-  <label>Musikk (.m4a format)</label>
+  <label>Musikk</label>
   <select id="music">
     <option value="">Ingen musikk</option>
     <option value="https://kaffesengen.github.io/chromecast-countdown/sounds/chill_morning.m4a">Chill Morning</option>
     <option value="https://kaffesengen.github.io/chromecast-countdown/sounds/morning_vibe.m4a">Morning Vibe</option>
   </select>
 
-  <label>Fargetema</label>
-  <div class="theme-grid">
-    <button class="theme-btn" onclick="setTheme(['#051937','#00bf72'])" style="background:linear-gradient(to right, #051937, #00bf72)"></button>
-    <button class="theme-btn" onclick="setTheme(['#ee0979','#ff6a00'])" style="background:linear-gradient(to right, #ee0979, #ff6a00)"></button>
-    <button class="theme-btn" onclick="setTheme(['#021b79','#0575e6'])" style="background:linear-gradient(to right, #021b79, #0575e6)"></button>
+  <label>Velg Atmosfære</label>
+  <div class="theme-row">
+    <div class="theme-dot active" style="background: linear-gradient(135deg, #051937, #00bf72);" onclick="setTheme('nordlys', this, '#00bf72')"></div>
+    <div class="theme-dot" style="background: linear-gradient(135deg, #ee0979, #ff6a00);" onclick="setTheme('sunset', this, '#ff6a00')"></div>
+    <div class="theme-dot" style="background: linear-gradient(135deg, #021b79, #0575e6);" onclick="setTheme('ocean', this, '#0575e6')"></div>
+    <div class="theme-dot" style="background: linear-gradient(135deg, #232526, #434343);" onclick="setTheme('dark', this, '#ffffff')"></div>
   </div>
 
-  <button class="btn-start" id="send">AKTIVER LUNTE</button>
-  <button class="btn-stop" id="stop">DESARMER</button>
+  <button class="btn-start" id="send">Start Nedtelling</button>
+  <div id="status">Klar til å koble til</div>
 </div>
 
 <script>
+  const APP_ID = "088AB566";
   let selectedColors = ["#051937", "#004d7a", "#008793", "#00bf72"];
-  function setTheme(colors) { selectedColors = [colors[0], colors[0], colors[1], colors[1]]; }
+  
+  const themes = {
+    nordlys: ["#051937", "#004d7a", "#008793", "#00bf72"],
+    sunset: ["#ee0979", "#ff6a00", "#f42f4b", "#ff9068"],
+    ocean: ["#021b79", "#0575e6", "#203a43", "#2c5364"],
+    dark: ["#232526", "#414345", "#000000", "#434343"]
+  };
 
-  setInterval(() => {
-    document.getElementById('clock').innerText = new Date().toLocaleTimeString('nb-NO');
-  }, 1000);
+  function setTheme(t, el, accentColor) {
+    selectedColors = themes[t];
+    document.querySelectorAll('.theme-dot').forEach(d => d.classList.remove('active'));
+    el.classList.add('active');
+    
+    // Oppdater hele appens glød-atmosfære
+    document.getElementById('glow').style.background = `radial-gradient(circle at center, ${accentColor}1a 0%, transparent 70%)`;
+  }
 
   window.__onGCastApiAvailable = (available) => {
     if (available) {
       cast.framework.CastContext.getInstance().setOptions({
-        receiverApplicationId: '088AB566',
+        receiverApplicationId: APP_ID,
         autoJoinPolicy: chrome.cast.AutoJoinPolicy.ORIGIN_SCOPED
       });
     }
@@ -71,24 +141,22 @@
 
   document.getElementById("send").onclick = async () => {
     const session = cast.framework.CastContext.getInstance().getCurrentSession();
-    if (!session) return alert("Koble til TV!");
+    if (!session) return alert("Koble til TV først!");
 
     const [h, m] = document.getElementById("time").value.split(":").map(Number);
-    const target = new Date();
-    target.setHours(h, m, 0, 0);
+    const target = new Date(); target.setHours(h, m, 0, 0);
     if (target < new Date()) target.setDate(target.getDate() + 1);
 
     const loadRequest = new chrome.cast.media.LoadRequest(new chrome.cast.media.MediaInfo("count", "application/x-cast"));
     loadRequest.customData = {
       targetEpoch: target.getTime(),
-      startEpoch: Date.now(),
       label: document.getElementById("label").value,
       musicUrl: document.getElementById("music").value,
       backgroundColors: selectedColors
     };
-    session.loadMedia(loadRequest);
+    await session.loadMedia(loadRequest);
+    document.getElementById("status").innerText = "Overført til TV ✅";
   };
-  document.getElementById("stop").onclick = () => cast.framework.CastContext.getInstance().getCurrentSession()?.endSession(true);
 </script>
 </body>
 </html>
