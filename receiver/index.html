@@ -2,150 +2,106 @@
 <html>
 <head>
     <meta charset="utf-8" />
-    <title>Giraffe Dash Receiver</title>
+    <title>Bombe Receiver</title>
     <style>
-        body { margin: 0; overflow: hidden; background: #000; font-family: 'Arial Black', sans-serif; }
-        #ui { position: absolute; top: 30px; left: 40px; color: white; font-size: 4vw; z-index: 10; font-style: italic; }
-        #lives { position: absolute; top: 30px; right: 40px; font-size: 3vw; z-index: 10; letter-spacing: 5px; }
-        
-        canvas { 
-            width: 100vw; height: 100vh; 
-            animation: colorShift 10s infinite alternate;
+        :root { --c1: #051937; --c2: #004d7a; --c3: #008793; --c4: #00bf72; }
+        body {
+            margin: 0; height: 100vh; overflow: hidden; font-family: 'Segoe UI', sans-serif;
+            background: linear-gradient(-45deg, var(--c1), var(--c2), var(--c3), var(--c4));
+            background-size: 400% 400%; animation: gradient 15s ease infinite;
+            color: white; display: flex; flex-direction: column; align-items: center; justify-content: center;
         }
+        @keyframes gradient { 0% { background-position: 0% 50%; } 50% { background-position: 100% 50%; } 100% { background-position: 0% 50%; } }
         
-        @keyframes colorShift {
-            0% { background: #1a2a6c; }
-            33% { background: #b21f1f; }
-            66% { background: #4a148c; }
-            100% { background: #004d40; }
-        }
+        #wall-clock { position: absolute; top: 40px; right: 50px; font-size: 3vw; font-family: monospace; opacity: 0.6; }
+        .title { font-size: 5vw; font-weight: 800; letter-spacing: 10px; margin-bottom: 0; text-shadow: 0 5px 15px rgba(0,0,0,0.5); }
+        .time { font-size: 18vw; font-weight: 900; margin: 0; line-height: 1; }
+        
+        .lunte-container { width: 70vw; height: 30px; background: rgba(0,0,0,0.3); border-radius: 15px; margin-top: 40px; position: relative; border: 2px solid rgba(255,255,255,0.1); overflow: hidden; }
+        #lunte-bar { height: 100%; width: 100%; background: linear-gradient(to left, #ffcc00, #ff4400); border-radius: 15px; transition: width 0.5s linear; position: relative; }
+        #gnist { position: absolute; right: 0; top: -10px; font-size: 40px; animation: flicker 0.1s infinite; }
+        @keyframes flicker { 0% { opacity: 1; transform: scale(1); } 50% { opacity: 0.7; transform: scale(1.2); } 100% { opacity: 1; transform: scale(1); } }
+
+        .bombe-ikon { font-size: 25vw; display: none; }
+        .explode { background: radial-gradient(circle, #ff0000, #000) !important; animation: shake 0.1s infinite !important; }
+        @keyframes shake { 0% { transform: translate(3px,3px); } 50% { transform: translate(-3px,-3px); } 100% { transform: translate(3px,3px); } }
     </style>
     <script src="https://www.gstatic.com/cast/sdk/libs/caf_receiver/v3/cast_receiver_framework.js"></script>
 </head>
 <body>
-    <div id="ui">SCORE: <span id="score">0</span></div>
-    <div id="lives">❤️❤️❤️❤️❤️❤️❤️❤️❤️</div>
-    <canvas id="game"></canvas>
+    <div id="wall-clock">00:00:00</div>
+    <div id="main-wrap" style="text-align:center; width: 100%;">
+        <div id="title-display" class="title">KLAR</div>
+        <div class="time" id="time">00:00:00</div>
+        <div class="lunte-container" id="lunte-wrap">
+            <div id="lunte-bar"><div id="gnist">🔥</div></div>
+        </div>
+        <div class="bombe-ikon" id="bombe-ikon">💣💥</div>
+    </div>
+
+    <audio id="bg-music" loop crossorigin="anonymous"></audio>
+    <audio id="explosion-sound" crossorigin="anonymous" src="https://kaffesengen.github.io/chromecast-countdown/sounds/bomb.m4a"></audio>
 
     <script>
-        const canvas = document.getElementById('game');
-        const ctx = canvas.getContext('2d');
-        canvas.width = window.innerWidth;
-        canvas.height = window.innerHeight;
+        const ctx = cast.framework.CastReceiverContext.getInstance();
+        const playerManager = ctx.getPlayerManager();
+        const state = { target: null, start: null, finished: false };
 
-        const context = cast.framework.CastReceiverContext.getInstance();
-        const NAMESPACE = 'urn:x-cast:no.kaffesengen.catdash';
+        setInterval(() => {
+            document.getElementById('wall-clock').innerText = new Date().toLocaleTimeString('nb-NO');
+        }, 1000);
 
-        let score = 0, lives = 9, gameActive = false, speed = 10, frame = 0, obstacles = [], hitEffect = 0;
+        playerManager.setMessageInterceptor(cast.framework.messages.MessageType.LOAD, (data) => {
+            const cd = data.customData || {};
+            state.target = cd.targetEpoch;
+            state.start = cd.startEpoch;
+            state.finished = false;
 
-        const giraffe = {
-            x: 100, y: 0, w: 80, h: 160,
-            dy: 0, jumpForce: 30, gravity: 1.5, grounded: false, ducking: false
-        };
-
-        context.addCustomMessageListener(NAMESPACE, (e) => {
-            const cmd = e.data.command;
-            if (cmd === 'START') resetGame();
-            if (cmd === 'JUMP' && giraffe.grounded) {
-                giraffe.dy = -giraffe.jumpForce;
-                giraffe.grounded = false;
+            if (cd.backgroundColors) {
+                const r = document.documentElement;
+                cd.backgroundColors.forEach((c, i) => r.style.setProperty(`--c${i+1}`, c));
             }
-            if (cmd === 'DUCK') {
-                giraffe.ducking = true;
-                setTimeout(() => { giraffe.ducking = false; }, 600);
+
+            const music = document.getElementById("bg-music");
+            if (cd.musicUrl) {
+                music.src = cd.musicUrl;
+                music.load();
+                const attempt = () => music.play().catch(() => setTimeout(attempt, 1000));
+                attempt();
             }
+
+            document.getElementById("main-wrap").classList.remove("explode");
+            document.getElementById("lunte-wrap").style.display = "block";
+            document.getElementById("time").style.display = "block";
+            document.getElementById("bombe-ikon").style.display = "none";
+            return data;
         });
 
-        function resetGame() {
-            score = 0; lives = 9; speed = 10; obstacles = []; gameActive = true;
-            giraffe.y = canvas.height - 210;
-        }
+        setInterval(() => {
+            if (!state.target || state.finished) return;
+            const now = Date.now();
+            const total = state.target - state.start;
+            const remaining = state.target - now;
+            
+            const s = Math.max(0, Math.floor(remaining / 1000));
+            document.getElementById("time").textContent = new Date(s * 1000).toISOString().substr(11, 8);
+            
+            const pct = Math.max(0, (remaining / total) * 100);
+            document.getElementById("lunte-bar").style.width = pct + "%";
 
-        function update() {
-            if (!gameActive) return;
-            frame++;
-            if (hitEffect > 0) hitEffect--;
-
-            // Physics
-            giraffe.y += giraffe.dy;
-            if (giraffe.y + (giraffe.ducking ? 80 : 160) < canvas.height - 50) {
-                giraffe.dy += giraffe.gravity;
-                giraffe.grounded = false;
-            } else {
-                giraffe.y = canvas.height - 50 - (giraffe.ducking ? 80 : 160);
-                giraffe.dy = 0;
-                giraffe.grounded = true;
+            if (remaining <= 0) {
+                state.finished = true;
+                document.getElementById("bg-music").pause();
+                document.getElementById("main-wrap").classList.add("explode");
+                document.getElementById("lunte-wrap").style.display = "none";
+                document.getElementById("time").style.display = "none";
+                document.getElementById("title-display").textContent = "BOOOOM!";
+                document.getElementById("bombe-ikon").style.display = "block";
+                document.getElementById("explosion-sound").play();
             }
+        }, 500);
 
-            // Spawn
-            if (frame % Math.floor(800/speed) === 0) {
-                const isBird = Math.random() > 0.5;
-                obstacles.push({
-                    x: canvas.width,
-                    y: isBird ? canvas.height - 300 : canvas.height - 130,
-                    w: 80, h: 80, type: isBird ? '🦅' : '📦', passed: false
-                });
-            }
-
-            // Move Obstacles
-            obstacles.forEach((obs, i) => {
-                obs.x -= speed;
-                
-                // Collision
-                const curH = giraffe.ducking ? 80 : 160;
-                if (giraffe.x < obs.x + 60 && giraffe.x + giraffe.w > obs.x + 20 &&
-                    giraffe.y < obs.y + 60 && giraffe.y + curH > obs.y + 20) {
-                    
-                    lives--;
-                    hitEffect = 20; // Blinker rødt
-                    obstacles.splice(i, 1);
-                    if (lives <= 0) gameActive = false;
-                    document.getElementById('lives').innerText = '❤️'.repeat(lives);
-                }
-
-                if (obs.x + obs.w < giraffe.x && !obs.passed) {
-                    obs.passed = true;
-                    score += 10;
-                    speed += 0.1;
-                    document.getElementById('score').innerText = score;
-                }
-                if (obs.x < -100) obstacles.splice(i, 1);
-            });
-        }
-
-        function draw() {
-            ctx.clearRect(0, 0, canvas.width, canvas.height);
-
-            // Ground
-            ctx.fillStyle = 'rgba(255,255,255,0.2)';
-            ctx.fillRect(0, canvas.height - 50, canvas.width, 50);
-
-            // Giraffe
-            ctx.save();
-            if (hitEffect % 4 > 1) ctx.filter = 'drop-shadow(0px 0px 20px red) brightness(2)';
-            ctx.font = giraffe.ducking ? '80px serif' : '150px serif';
-            // Giraffen ser nå mot høyre (bruker 🦒 og speiler hvis nødvendig, men emojien ser vanligvis høyre/venstre avhengig av OS)
-            ctx.fillText('🦒', giraffe.x, giraffe.y + (giraffe.ducking ? 70 : 130));
-            ctx.restore();
-
-            // Obstacles
-            ctx.font = '70px serif';
-            obstacles.forEach(obs => {
-                ctx.fillText(obs.type, obs.x, obs.y + 60);
-            });
-
-            if (!gameActive && lives <= 0) {
-                ctx.fillStyle = 'rgba(0,0,0,0.8)';
-                ctx.fillRect(0,0, canvas.width, canvas.height);
-                ctx.fillStyle = '#ffcc00';
-                ctx.font = '80px sans-serif';
-                ctx.fillText('GAME OVER', canvas.width/2 - 250, canvas.height/2);
-            }
-            requestAnimationFrame(() => { update(); draw(); });
-        }
-
-        context.start();
-        draw();
+        ctx.start();
     </script>
 </body>
 </html>
