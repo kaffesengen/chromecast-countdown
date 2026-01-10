@@ -4,29 +4,74 @@
     <meta charset="utf-8" />
     <title>Sleek Receiver</title>
     <style>
-        :root { --c1: #051937; --c2: #004d7a; --c3: #008793; --c4: #00bf72; }
+        :root { 
+            --c1: #051937; --c2: #004d7a; --c3: #008793; --c4: #00bf72; 
+            --flash-opacity: 0;
+        }
+        
+        * { box-sizing: border-box; transition: all 3s cubic-bezier(0.4, 0, 0.2, 1); }
+
         body {
             margin: 0; height: 100vh; overflow: hidden; font-family: 'SF Pro Display', sans-serif;
             background: linear-gradient(-45deg, var(--c1), var(--c2), var(--c3), var(--c4));
-            background-size: 400% 400%; animation: gradient 18s ease infinite;
+            background-size: 400% 400%; animation: gradientMove 18s ease infinite;
             color: #fff; display: flex; flex-direction: column; align-items: center; justify-content: center;
         }
-        @keyframes gradient { 0% { background-position: 0% 50%; } 50% { background-position: 100% 50%; } 100% { background-position: 0% 50%; } }
+
+        /* Dette laget ligger over alt og flasher når tiden er ute */
+        body::after {
+            content: ''; position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+            background: white; opacity: var(--flash-opacity); z-index: 100;
+            pointer-events: none; transition: opacity 0.8s ease;
+        }
+
+        @keyframes gradientMove { 0% { background-position: 0% 50%; } 50% { background-position: 100% 50%; } 100% { background-position: 0% 50%; } }
         
-        #wall-clock { position: absolute; top: 60px; right: 80px; font-size: 3.5vw; font-weight: 300; opacity: 0.5; letter-spacing: 2px; }
-        .title { font-size: 6vw; font-weight: 800; text-transform: uppercase; letter-spacing: 15px; margin-bottom: 0; text-shadow: 0 15px 45px rgba(0,0,0,0.4); }
-        .time { font-size: 24vw; font-weight: 900; line-height: 0.8; margin: 40px 0; filter: drop-shadow(0 25px 60px rgba(0,0,0,0.6)); }
-        .music-tag { font-size: 2.5vw; background: rgba(255,255,255,0.1); padding: 18px 60px; border-radius: 100px; backdrop-filter: blur(20px); border: 1px solid rgba(255,255,255,0.15); display: none; }
+        #wall-clock { 
+            position: absolute; top: 40px; right: 60px; 
+            font-size: 2.2vw; /* Gjort mindre som ønsket */
+            font-weight: 300; opacity: 0.6; letter-spacing: 1px; 
+        }
+
+        .main-container { text-align: center; z-index: 10; }
+        
+        .title { 
+            font-size: 5vw; font-weight: 800; text-transform: uppercase; 
+            letter-spacing: 12px; margin-bottom: 0; 
+            text-shadow: 0 10px 40px rgba(0,0,0,0.3);
+            transition: transform 1.5s ease, opacity 1.5s ease;
+        }
+
+        .time { 
+            font-size: 20vw; font-weight: 900; line-height: 0.8; margin: 30px 0; 
+            filter: drop-shadow(0 20px 50px rgba(0,0,0,0.4));
+            transition: transform 1.5s ease, opacity 1s ease;
+        }
+
+        .finished-message {
+            position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%) scale(0.8);
+            font-size: 8vw; font-weight: 900; text-transform: uppercase; letter-spacing: 5px;
+            opacity: 0; transition: all 2s cubic-bezier(0.19, 1, 0.22, 1);
+            width: 100%; text-align: center;
+        }
+
+        .is-done .time, .is-done .title { opacity: 0; transform: scale(0.5); }
+        .is-done .finished-message { opacity: 1; transform: translate(-50%, -50%) scale(1); }
+
+        .music-tag { font-size: 2vw; background: rgba(255,255,255,0.1); padding: 15px 50px; border-radius: 100px; backdrop-filter: blur(20px); border: 1px solid rgba(255,255,255,0.15); display: none; margin-top: 20px; }
     </style>
     <script src="https://www.gstatic.com/cast/sdk/libs/caf_receiver/v3/cast_receiver_framework.js"></script>
 </head>
 <body>
-    <div id="wall-clock">00:00:00</div>
-    <div style="text-align:center">
+    <div id="wall-clock">00:00</div>
+    
+    <div class="main-container" id="container">
         <div id="title-display" class="title">Klar</div>
         <div class="time" id="time">00:00:00</div>
         <div id="music-text" class="music-tag">🎵 Musikk</div>
     </div>
+
+    <div class="finished-message" id="done-msg">PÅ TIDE Å DRA! 🚗</div>
 
     <audio id="bg-music" loop crossorigin="anonymous"></audio>
     <audio id="end-sound" src="https://kaffesengen.github.io/chromecast-countdown/sounds/bomb.m4a" crossorigin="anonymous"></audio>
@@ -36,15 +81,28 @@
         const playerManager = ctx.getPlayerManager();
         const state = { target: null, finished: false };
 
-        setInterval(() => { document.getElementById('wall-clock').innerText = new Date().toLocaleTimeString('nb-NO'); }, 1000);
+        // 24-timers klokke i hjørnet
+        setInterval(() => { 
+            const now = new Date();
+            const timeStr = now.toLocaleTimeString('nb-NO', { hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: false });
+            document.getElementById('wall-clock').innerText = timeStr; 
+        }, 1000);
 
         playerManager.setMessageInterceptor(cast.framework.messages.MessageType.LOAD, (data) => {
             const cd = data.customData || {};
-            state.target = cd.targetEpoch; state.finished = false;
+            state.target = cd.targetEpoch;
+            state.finished = false;
+            
+            // Nullstill UI hvis ny timer startes
+            document.body.classList.remove('is-done');
+            document.documentElement.style.setProperty('--flash-opacity', '0');
+
+            // Fade farger over (skjer automatisk pga CSS transition: all 3s)
             if (cd.backgroundColors) {
                 const r = document.documentElement;
                 cd.backgroundColors.forEach((c, i) => r.style.setProperty(`--c${i+1}`, c));
             }
+
             const music = document.getElementById("bg-music");
             if (cd.musicUrl) {
                 music.src = cd.musicUrl; music.load();
@@ -61,16 +119,30 @@
         setInterval(() => {
             if (!state.target || state.finished) return;
             const left = state.target - Date.now();
-            const s = Math.max(0, Math.floor(left / 1000));
-            const h = Math.floor(s/3600), m = Math.floor((s%3600)/60), sec = s%60;
-            document.getElementById("time").textContent = `${String(h).padStart(2,'0')}:${String(m).padStart(2,'0')}:${String(sec).padStart(2,'0')}`;
+            
             if (left <= 0) {
-                state.finished = true;
-                document.getElementById("bg-music").pause();
-                document.getElementById("end-sound").play();
-                document.getElementById("title-display").textContent = "Ferdig";
+                triggerFinish();
+            } else {
+                const s = Math.floor(left / 1000);
+                const h = Math.floor(s/3600), m = Math.floor((s%3600)/60), sec = s%60;
+                document.getElementById("time").textContent = `${String(h).padStart(2,'0')}:${String(m).padStart(2,'0')}:${String(sec).padStart(2,'0')}`;
             }
         }, 500);
+
+        function triggerFinish() {
+            state.finished = true;
+            document.getElementById("bg-music").pause();
+            document.getElementById("end-sound").play();
+            
+            // Start den sleeke avslutningssekvensen
+            document.body.classList.add('is-done');
+            
+            // Flash-effekt
+            document.documentElement.style.setProperty('--flash-opacity', '0.4');
+            setTimeout(() => {
+                document.documentElement.style.setProperty('--flash-opacity', '0');
+            }, 800);
+        }
 
         ctx.start({ disableIdleTimeout: true });
     </script>
