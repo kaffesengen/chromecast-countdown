@@ -3,89 +3,93 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width,initial-scale=1" />
-  <title>Premium Countdown Control</title>
+  <title>Premium Cast Control</title>
   <script src="https://www.gstatic.com/cv/js/sender/v1/cast_sender.js?loadCastFramework=1"></script>
   <style>
     :root {
       --accent: #2EE59D;
-      --bg-gradient: linear-gradient(135deg, #070A12 0%, #0B1020 100%);
-      --glass: rgba(255, 255, 255, 0.06);
-      --glass-border: rgba(255, 255, 255, 0.12);
+      --bg-color: #070A12;
+      --glass: rgba(255, 255, 255, 0.05);
+      --glass-border: rgba(255, 255, 255, 0.1);
     }
 
-    * { box-sizing: border-box; transition: all 0.3s cubic-bezier(0.25, 0.8, 0.25, 1); }
+    * { box-sizing: border-box; transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1); }
 
     body {
-      margin: 0; font-family: 'Inter', -apple-system, sans-serif;
+      margin: 0; font-family: 'Inter', system-ui, sans-serif;
       height: 100vh; display: flex; align-items: center; justify-content: center;
-      background: var(--bg-gradient); color: white; overflow: hidden;
+      background-color: var(--bg-color); color: white; overflow: hidden;
     }
 
-    /* Dynamisk bakgrunnslys som endres ved fargevalg */
-    .glow-overlay {
-      position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%);
-      width: 100vw; height: 100vh; z-index: -1;
+    /* Bakgrunnsglød */
+    .glow-bg {
+      position: fixed; width: 100vw; height: 100vh; z-index: -1;
       background: radial-gradient(circle at center, rgba(46, 229, 157, 0.05) 0%, transparent 70%);
-      opacity: 0.5;
     }
 
     .card {
       background: var(--glass); border: 1px solid var(--glass-border);
-      padding: 40px; border-radius: 32px; width: min(480px, 95%);
-      backdrop-filter: blur(20px); box-shadow: 0 40px 100px rgba(0,0,0,0.6);
+      padding: 40px; border-radius: 35px; width: min(480px, 95%);
+      backdrop-filter: blur(25px); box-shadow: 0 50px 100px rgba(0,0,0,0.5);
     }
 
     .header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 30px; }
     
-    /* Chromecast Ikon respons */
-    google-cast-launcher {
-      width: 40px; height: 40px; cursor: pointer;
-      filter: drop-shadow(0 0 0px var(--accent));
-    }
-    google-cast-launcher:hover { transform: scale(1.1) rotate(5deg); filter: drop-shadow(0 0 10px white); }
+    google-cast-launcher { width: 42px; height: 42px; cursor: pointer; }
+    google-cast-launcher:hover { transform: scale(1.1); filter: drop-shadow(0 0 10px white); }
 
-    label { display: block; font-size: 11px; opacity: 0.5; margin-top: 20px; font-weight: 700; text-transform: uppercase; letter-spacing: 1.5px; }
+    label { display: block; font-size: 11px; opacity: 0.4; margin-top: 20px; font-weight: 800; text-transform: uppercase; letter-spacing: 2px; }
 
     input, select {
-      width: 100%; padding: 14px; margin-top: 8px; border-radius: 14px;
-      border: 1px solid var(--glass-border); background: rgba(0,0,0,0.2);
-      color: white; font-size: 16px; outline: none;
+      width: 100%; padding: 15px; margin-top: 8px; border-radius: 15px;
+      border: 1px solid var(--glass-border); background: rgba(0,0,0,0.3);
+      color: white; font-size: 16px; outline: none; appearance: none;
     }
-    input:focus, select:focus { border-color: var(--accent); background: rgba(0,0,0,0.4); box-shadow: 0 0 20px rgba(46, 229, 157, 0.1); }
+    input:focus { border-color: var(--accent); }
 
-    /* Polerte fargevelgere */
-    .theme-row { display: flex; justify-content: space-between; margin-top: 15px; background: rgba(0,0,0,0.2); padding: 15px; border-radius: 20px; }
-    .theme-dot {
-      width: 44px; height: 44px; border-radius: 50%; cursor: pointer;
-      border: 3px solid transparent; position: relative;
+    /* FIKS AV DE RUNDE BALLENE */
+    .theme-row { 
+      display: flex; justify-content: space-between; margin-top: 15px; 
+      background: rgba(0,0,0,0.2); padding: 20px; border-radius: 25px;
+      border: 1px solid var(--glass-border);
     }
-    .theme-dot:hover { transform: scale(1.15); box-shadow: 0 0 20px rgba(255,255,255,0.2); }
-    .theme-dot:active { transform: scale(0.9); }
-    .theme-dot.active { border-color: white; box-shadow: 0 0 25px rgba(255,255,255,0.3); }
-    .theme-dot.active::after { content: '✓'; position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); color: white; font-size: 12px; }
+    .theme-dot {
+      width: 50px; height: 50px; border-radius: 50%; cursor: pointer;
+      border: 2px solid transparent; position: relative;
+      overflow: hidden; /* Dette fjerner de firkantede hjørnene inni */
+      background-clip: padding-box;
+      box-shadow: 0 4px 15px rgba(0,0,0,0.3);
+    }
+    .theme-dot:hover { transform: scale(1.15) translateY(-3px); box-shadow: 0 10px 20px rgba(0,0,0,0.4); }
+    .theme-dot.active { border-color: white; transform: scale(1.1); box-shadow: 0 0 20px rgba(255,255,255,0.2); }
+    .theme-dot.active::after {
+      content: '✓'; position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%);
+      color: white; font-weight: bold; font-size: 14px; text-shadow: 0 2px 4px rgba(0,0,0,0.5);
+    }
 
     .btn-start {
-      background: var(--accent); color: #070A12; border: none; font-weight: 800;
-      margin-top: 35px; cursor: pointer; font-size: 16px; text-transform: uppercase; letter-spacing: 1px;
-      padding: 18px; border-radius: 16px; box-shadow: 0 10px 20px rgba(46, 229, 157, 0.2);
+      background: var(--accent); color: #000; border: none; font-weight: 900;
+      margin-top: 35px; cursor: pointer; font-size: 17px; text-transform: uppercase; letter-spacing: 1px;
+      padding: 20px; border-radius: 18px; width: 100%;
+      box-shadow: 0 10px 25px rgba(46, 229, 157, 0.2);
     }
-    .btn-start:hover { transform: translateY(-3px); box-shadow: 0 15px 30px rgba(46, 229, 157, 0.4); background: #3ef7b0; }
-    .btn-start:active { transform: translateY(1px); }
+    .btn-start:hover { transform: translateY(-4px); box-shadow: 0 20px 40px rgba(46, 229, 157, 0.4); filter: brightness(1.1); }
+    .btn-start:active { transform: translateY(0); }
 
-    #status { font-size: 11px; text-align: center; margin-top: 20px; opacity: 0.4; letter-spacing: 0.5px; }
+    #status { font-size: 12px; text-align: center; margin-top: 20px; opacity: 0.4; }
   </style>
 </head>
 <body>
 
-<div class="glow-overlay" id="glow"></div>
+<div class="glow-bg" id="glow"></div>
 
 <div class="card">
   <div class="header">
-    <h2 style="margin:0; font-weight: 800; letter-spacing: -0.5px;">Cast Control</h2>
+    <h2 style="margin:0; font-weight: 900;">Cast Control</h2>
     <google-cast-launcher></google-cast-launcher>
   </div>
 
-  <label>Tittel på TV</label>
+  <label>Tittel</label>
   <input type="text" id="label" value="Middag">
 
   <label>Tidspunkt</label>
@@ -106,14 +110,13 @@
     <div class="theme-dot" style="background: linear-gradient(135deg, #232526, #434343);" onclick="setTheme('dark', this, '#ffffff')"></div>
   </div>
 
-  <button class="btn-start" id="send">Start Nedtelling</button>
-  <div id="status">Klar til å koble til</div>
+  <button class="btn-start" id="send">Start på TV</button>
+  <div id="status">Klar for casting</div>
 </div>
 
 <script>
   const APP_ID = "088AB566";
   let selectedColors = ["#051937", "#004d7a", "#008793", "#00bf72"];
-  
   const themes = {
     nordlys: ["#051937", "#004d7a", "#008793", "#00bf72"],
     sunset: ["#ee0979", "#ff6a00", "#f42f4b", "#ff9068"],
@@ -121,13 +124,11 @@
     dark: ["#232526", "#414345", "#000000", "#434343"]
   };
 
-  function setTheme(t, el, accentColor) {
+  function setTheme(t, el, accent) {
     selectedColors = themes[t];
     document.querySelectorAll('.theme-dot').forEach(d => d.classList.remove('active'));
     el.classList.add('active');
-    
-    // Oppdater hele appens glød-atmosfære
-    document.getElementById('glow').style.background = `radial-gradient(circle at center, ${accentColor}1a 0%, transparent 70%)`;
+    document.getElementById('glow').style.background = `radial-gradient(circle at center, ${accent}15 0%, transparent 70%)`;
   }
 
   window.__onGCastApiAvailable = (available) => {
