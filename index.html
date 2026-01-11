@@ -14,25 +14,24 @@
   <script src="https://www.gstatic.com/cv/js/sender/v1/cast_sender.js?loadCastFramework=1"></script>
   <style>
     :root {
-      --accent: #2EE59D;
-      --glass: rgba(255, 255, 255, 0.1);
-      --glass-heavy: rgba(255, 255, 255, 0.2);
-      --border: rgba(255, 255, 255, 0.2);
-      --text: #ffffff;
-      --fallback-bg: #1A1A2E; /* Ny fallback-farge */
-    }
+  --accent: #2EE59D;
+  --glass: rgba(255, 255, 255, 0.1);
+  --border: rgba(255, 255, 255, 0.2);
+  --text: #ffffff;
+  --fallback-bg: #1A1A2E;
+}
 
-    * { box-sizing: border-box; transition: all 0.4s cubic-bezier(0.165, 0.84, 0.44, 1); }
-
-    /* Finn og erstatt body- og .card-seksjonene dine med dette: */
-
-/* Erstatt din nåværende body og .card med dette */
+* { 
+  box-sizing: border-box; 
+  transition: all 0.3s ease; 
+  -webkit-user-select: none; /* Gjør det mer "app-aktig" */
+}
 
 body {
   margin: 0;
   padding: 0;
   font-family: 'SF Pro Display', -apple-system, sans-serif;
-  height: 100vh;
+  height: 100dvh; /* Bruker dynamisk høyde for mobil */
   width: 100vw;
   display: flex;
   align-items: center;
@@ -40,131 +39,97 @@ body {
   background: var(--fallback-bg) url('background.jpg') no-repeat center center fixed;
   background-size: cover;
   color: var(--text);
-  overflow: hidden; /* Dette låser skjermen helt fast */
-  position: fixed; /* Forhindrer "pull-to-refresh" på mobil */
+  overflow: hidden;
+  position: fixed;
 }
 
 .card {
   background: var(--glass);
   border: 1px solid var(--border);
-  padding: 5vh 30px; /* Padding skalerer med skjermhøyden */
-  border-radius: 40px;
-  width: 90%;
+  padding: 20px; /* Redusert for å unngå cropping */
+  border-radius: 30px;
+  width: 92%;
   max-width: 400px;
-  backdrop-filter: blur(30px) saturate(180%);
-  box-shadow: 0 50px 100px rgba(0,0,0,0.5), inset 0 0 0 1px var(--border);
+  backdrop-filter: blur(25px) saturate(180%);
+  box-shadow: 0 40px 80px rgba(0,0,0,0.5);
   
-  /* Låser innholdet */
+  /* Låser innholdet til midten */
   display: flex;
   flex-direction: column;
-  justify-content: center;
-  max-height: 95vh; /* Passer på at den aldri blir høyere enn skjermen */
+  max-height: 96dvh; /* Bruker nesten hele høyden ved behov */
 }
 
-/* Her krymper vi elementene dynamisk basert på høyden på skjermen */
+.header { 
+  display: flex; 
+  justify-content: space-between; 
+  align-items: center; 
+  margin-bottom: 10px; /* Minimal margin */
+}
+
+h1 { font-size: 20px; margin: 0; }
+
 label {
   display: block;
-  font-size: 11px;
+  font-size: 10px;
   opacity: 0.7;
-  margin-top: 2vh; /* Marger som tilpasser seg høyden */
+  margin-top: 12px;
   font-weight: 600;
   text-transform: uppercase;
-  letter-spacing: 1.5px;
+  letter-spacing: 1px;
 }
 
 input, select {
   width: 100%;
-  padding: 12px 16px; /* Litt slankere inputs */
-  margin-top: 5px;
-  border-radius: 15px;
+  padding: 10px 14px; /* Kompakt men trykkbart */
+  margin-top: 4px;
+  border-radius: 12px;
   border: 1px solid var(--border);
-  background: rgba(0,0,0,0.25);
+  background: rgba(0,0,0,0.3);
   color: white;
-  font-size: 16px;
+  font-size: 16px; /* Viktig for å unngå auto-zoom på iPhone */
   outline: none;
 }
 
 .theme-container {
-  margin-top: 2vh;
-  padding: 15px;
+  margin-top: 12px;
+  padding: 10px;
   background: rgba(0,0,0,0.2);
-  border-radius: 20px;
+  border-radius: 15px;
   display: flex;
   justify-content: space-around;
+  gap: 10px;
 }
 
 .theme-dot {
-  width: 45px; /* Litt mindre sirkler for å spare plass */
-  height: 45px;
+  width: 40px; /* Mindre kuler sparer MYE vertikal plass */
+  height: 40px;
   border-radius: 50%;
+  cursor: pointer;
+  border: 2px solid transparent;
 }
+
+.theme-dot.active { border-color: white; box-shadow: 0 0 15px currentColor; }
 
 .btn-start {
-  margin-top: 3vh;
-  padding: 18px;
+  margin-top: 20px;
+  padding: 16px;
   font-size: 16px;
-  border-radius: 18px;
-  /* ... resten av stilen din ... */
+  font-weight: 800;
+  text-transform: uppercase;
+  border-radius: 15px;
+  border: none;
+  background: var(--accent);
+  color: #000;
+  cursor: pointer;
+  box-shadow: 0 10px 20px rgba(46, 229, 157, 0.2);
 }
 
-    .header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 30px; }
-    
-    /* Hvit og animert Cast-ikon */
-    google-cast-launcher {
-      width: 44px; height: 44px; cursor: pointer;
-      --disconnected-color: white; --connected-color: var(--accent);
-    }
-    google-cast-launcher:hover { transform: scale(1.15) rotate(8deg); filter: drop-shadow(0 0 15px rgba(255,255,255,0.6)); }
-
-    label { display: block; font-size: 12px; opacity: 0.7; margin-top: 25px; font-weight: 600; text-transform: uppercase; letter-spacing: 1.5px; }
-
-    /* Forbedret input og dropdown */
-    input, select {
-      width: 100%; padding: 16px; margin-top: 10px; border-radius: 18px;
-      border: 1px solid var(--border); background: rgba(0,0,0,0.25);
-      color: white; font-size: 16px; outline: none; appearance: none;
-    }
-    
-    /* Hvit klokke-ikon for tid-feltet */
-    input[type="time"]::-webkit-calendar-picker-indicator {
-      filter: invert(1); cursor: pointer; scale: 1.2;
-    }
-
-    select {
-      background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='24' height='24' viewBox='0 0 24 24' fill='none' stroke='white' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='6 9 12 15 18 9'%3E%3C/polyline%3E%3C/svg%3E");
-      background-repeat: no-repeat; background-position: right 15px center; background-size: 18px;
-    }
-
-    input:focus, select:focus { background: rgba(0,0,0,0.4); border-color: white; }
-
-    /* Atmosfære-velger (Runde baller med glow) */
-    .theme-container { 
-      margin-top: 15px; background: rgba(0,0,0,0.2); 
-      padding: 20px; border-radius: 25px; border: 1px solid var(--border);
-      display: flex; justify-content: space-around;
-    }
-    
-    .theme-dot {
-      width: 52px; height: 52px; border-radius: 50%; cursor: pointer;
-      border: 3px solid transparent; position: relative;
-    }
-    .theme-dot:hover { transform: scale(1.2); filter: brightness(1.2); }
-    .theme-dot.active { border-color: white; box-shadow: 0 0 30px currentColor; }
-    .theme-dot.active::after {
-      content: '✓'; position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%);
-      color: white; font-weight: 800; font-size: 18px;
-    }
-
-    .btn-start {
-      background: var(--accent); color: #000; border: none; font-weight: 900;
-      margin-top: 40px; cursor: pointer; font-size: 18px; text-transform: uppercase;
-      padding: 22px; border-radius: 20px; width: 100%; letter-spacing: 1px;
-      box-shadow: 0 15px 30px rgba(46, 229, 157, 0.3);
-    }
-    .btn-start:hover { transform: translateY(-5px) scale(1.02); box-shadow: 0 20px 45px rgba(46, 229, 157, 0.5); }
-    .btn-start:active { transform: translateY(0) scale(0.98); }
-
-    #status { font-size: 13px; text-align: center; margin-top: 20px; opacity: 0.5; font-weight: 500; }
+#status { 
+  margin-top: 10px; 
+  font-size: 11px; 
+  text-align: center; 
+  opacity: 0.5; 
+}
   </style>
 </head>
 <body>
