@@ -26,51 +26,85 @@
 
     /* Finn og erstatt body- og .card-seksjonene dine med dette: */
 
+/* Erstatt din nåværende body og .card med dette */
+
 body {
-  margin: 0; 
+  margin: 0;
+  padding: 0;
   font-family: 'SF Pro Display', -apple-system, sans-serif;
-  min-height: 100vh; /* Bruk min-height i stedet for height */
-  display: flex; 
-  align-items: center; 
+  height: 100vh;
+  width: 100vw;
+  display: flex;
+  align-items: center;
   justify-content: center;
-  /* Sørg for at bakgrunnen alltid dekker, uansett skjermform */
   background: var(--fallback-bg) url('background.jpg') no-repeat center center fixed;
-  background-size: cover; 
+  background-size: cover;
   color: var(--text);
-  padding: 20px; /* Gir litt luft på ytterskjermen */
+  overflow: hidden; /* Dette låser skjermen helt fast */
+  position: fixed; /* Forhindrer "pull-to-refresh" på mobil */
 }
 
 .card {
-  background: var(--glass); 
+  background: var(--glass);
   border: 1px solid var(--border);
-  padding: 30px; /* Litt mindre padding sparer plass på innerskjermen */
-  border-radius: 40px; 
-  
-  /* RESPONSIV BREDDE: */
-  width: 100%; 
-  max-width: 440px; 
-  
+  padding: 5vh 30px; /* Padding skalerer med skjermhøyden */
+  border-radius: 40px;
+  width: 90%;
+  max-width: 400px;
   backdrop-filter: blur(30px) saturate(180%);
   box-shadow: 0 50px 100px rgba(0,0,0,0.5), inset 0 0 0 1px var(--border);
   
-  /* FIKS FOR CROP: */
-  max-height: 90vh; /* Hindrer at kortet går utenfor skjermen */
-  overflow-y: auto; /* Legger til scroll internt i kortet hvis det blir for høyt */
-  
-  /* Gjør innholdet mer kompakt på små skjermer */
+  /* Låser innholdet */
   display: flex;
   flex-direction: column;
+  justify-content: center;
+  max-height: 95vh; /* Passer på at den aldri blir høyere enn skjermen */
 }
 
-/* Fiks for at input-feltene ikke skal bli for store på smale skjermer */
-input, select, .btn-start {
-  font-size: 16px; /* Forhindrer iOS auto-zoom og sparer plass */
-  padding: 14px;
+/* Her krymper vi elementene dynamisk basert på høyden på skjermen */
+label {
+  display: block;
+  font-size: 11px;
+  opacity: 0.7;
+  margin-top: 2vh; /* Marger som tilpasser seg høyden */
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 1.5px;
 }
 
-/* Skjul scrollbar for et "clean" utseende, men behold funksjonen */
-.card::-webkit-scrollbar {
-  display: none;
+input, select {
+  width: 100%;
+  padding: 12px 16px; /* Litt slankere inputs */
+  margin-top: 5px;
+  border-radius: 15px;
+  border: 1px solid var(--border);
+  background: rgba(0,0,0,0.25);
+  color: white;
+  font-size: 16px;
+  outline: none;
+}
+
+.theme-container {
+  margin-top: 2vh;
+  padding: 15px;
+  background: rgba(0,0,0,0.2);
+  border-radius: 20px;
+  display: flex;
+  justify-content: space-around;
+}
+
+.theme-dot {
+  width: 45px; /* Litt mindre sirkler for å spare plass */
+  height: 45px;
+  border-radius: 50%;
+}
+
+.btn-start {
+  margin-top: 3vh;
+  padding: 18px;
+  font-size: 16px;
+  border-radius: 18px;
+  /* ... resten av stilen din ... */
 }
 
     .header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 30px; }
