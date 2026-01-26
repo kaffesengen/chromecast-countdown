@@ -1,25 +1,246 @@
 <!doctype html>
-<html>
+<html lang="no">
 <head>
-    <meta charset="utf-8" />
-    <title>Sleek Receiver</title>
-    <link rel="stylesheet" href="style.css">
-    <script src="https://www.gstatic.com/cast/sdk/libs/caf_receiver/v3/cast_receiver_framework.js"></script>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Vision Countdown Control</title>
+  <link rel="apple-touch-icon" href="icon.png">
+  <link rel="icon" type="image/png" href="icon.png">
+
+  <link rel="manifest" href="manifest.json">
+  
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <script src="https://www.gstatic.com/cv/js/sender/v1/cast_sender.js?loadCastFramework=1"></script>
+  <style>
+  :root {
+    --accent: #2EE59D;
+    --glass: rgba(255, 255, 255, 0.1);
+    --border: rgba(255, 255, 255, 0.2);
+    --text: #ffffff;
+    --fallback-bg: #1A1A2E;
+  }
+
+  * { 
+    box-sizing: border-box; 
+    transition: all 0.3s ease; 
+    -webkit-user-select: none;
+    -webkit-tap-highlight-color: transparent;
+  }
+
+  body {
+    margin: 0;
+    padding: 0;
+    font-family: 'SF Pro Display', -apple-system, sans-serif;
+    height: 100dvh;
+    width: 100vw;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: var(--fallback-bg) url('background.jpg') no-repeat center center fixed;
+    background-size: cover;
+    color: var(--text);
+    overflow: hidden;
+    position: fixed;
+  }
+
+  .card {
+    background: var(--glass);
+    border: 1px solid var(--border);
+    padding: 20px;
+    border-radius: 30px;
+    width: 92%;
+    max-width: 400px;
+    backdrop-filter: blur(25px) saturate(180%);
+    box-shadow: 0 40px 80px rgba(0,0,0,0.5);
+    display: flex;
+    flex-direction: column;
+    max-height: 96dvh;
+  }
+
+  .header { 
+    display: flex; 
+    justify-content: space-between; 
+    align-items: center; 
+    margin-bottom: 10px;
+  }
+
+  h1 { font-size: 20px; margin: 0; font-weight: 700; }
+
+  /* Cast-ikon fiks: Hindrer at det blir stort på PC og legger til animasjon */
+  google-cast-launcher {
+    display: block;
+    width: 38px;
+    height: 38px;
+    cursor: pointer;
+    background-color: rgba(255, 255, 255, 0.1);
+    border-radius: 10px;
+    padding: 5px;
+    --disconnected-color: white;
+    --connected-color: var(--accent);
+    transition: all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+  }
+
+  google-cast-launcher:hover {
+    transform: scale(1.1) rotate(15deg);
+    background-color: rgba(255, 255, 255, 0.2);
+  }
+
+  google-cast-launcher:active {
+    transform: scale(0.9) rotate(-10deg);
+  }
+
+  label {
+    display: block;
+    font-size: 10px;
+    opacity: 0.7;
+    margin-top: 10px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+  }
+
+  input, select {
+    width: 100%;
+    padding: 10px 14px;
+    margin-top: 4px;
+    border-radius: 12px;
+    border: 1px solid var(--border);
+    background: rgba(0,0,0,0.3);
+    color: white;
+    font-size: 16px;
+    outline: none;
+    appearance: none; /* Fjerner standard styling på dropdown */
+  }
+
+  /* Hvit klokke-ikon for tid-feltet */
+  input[type="time"]::-webkit-calendar-picker-indicator {
+    filter: invert(1);
+    cursor: pointer;
+  }
+
+  .theme-container {
+    margin-top: 10px;
+    padding: 8px;
+    background: rgba(0,0,0,0.2);
+    border-radius: 15px;
+    display: flex;
+    justify-content: space-around;
+    gap: 8px;
+  }
+
+  .theme-dot {
+    width: 38px;
+    height: 38px;
+    border-radius: 50%;
+    cursor: pointer;
+    border: 2px solid transparent;
+  }
+
+  .theme-dot:hover { transform: scale(1.15); }
+  .theme-dot.active { border-color: white; box-shadow: 0 0 15px currentColor; }
+
+  .btn-start {
+    margin-top: 18px;
+    padding: 15px;
+    font-size: 16px;
+    font-weight: 800;
+    text-transform: uppercase;
+    border-radius: 14px;
+    border: none;
+    background: var(--accent);
+    color: #000;
+    cursor: pointer;
+    box-shadow: 0 10px 20px rgba(46, 229, 157, 0.2);
+  }
+
+  .btn-start:hover { transform: translateY(-2px); filter: brightness(1.1); }
+  .btn-start:active { transform: translateY(2px); }
+
+  #status { 
+    margin-top: 8px; 
+    font-size: 11px; 
+    text-align: center; 
+    opacity: 0.5; 
+  }
+</style>
 </head>
 <body>
-    <div id="wall-clock">00:00:00</div>
-    
-    <div class="main-container" id="container">
-        <div id="title-display" class="title">Klar</div>
-        <div class="time" id="time">00:00:00</div>
-        <div id="music-text" class="music-tag">🎵 Musikk</div>
-    </div>
 
-    <div class="finished-message" id="done-msg">PÅ TIDE Å DRA! 🚗</div>
+<div class="card">
+  <div class="header">
+    <h1 style="margin:0; font-size: 28px; font-weight: 800;">Cast Control</h1>
+    <google-cast-launcher></google-cast-launcher>
+  </div>
 
-    <audio id="bg-music" loop crossorigin="anonymous"></audio>
-    <audio id="end-sound" src="https://kaffesengen.github.io/chromecast-countdown/sounds/bomb.m4a" crossorigin="anonymous"></audio>
+  <label>Hva skjer?</label>
+  <input type="text" id="label" value="Middag">
 
-    <script src="script.js"></script>
+  <label>Tidspunkt</label>
+  <input type="time" id="time" value="18:00">
+
+  <label>Atmosfærisk Musikk</label>
+  <select id="music">
+    <option value="">Ingen musikk</option>
+    <option value="https://kaffesengen.github.io/chromecast-countdown/sounds/chill_morning.m4a">Chill Morning</option>
+    <option value="https://kaffesengen.github.io/chromecast-countdown/sounds/morning_vibe.m4a">Morning Vibe</option>
+  </select>
+
+  <label>Velg Atmosfære</label>
+  <div class="theme-container">
+    <div class="theme-dot active" style="background: #00bf72; color: #00bf72;" onclick="setTheme('nordlys', this)"></div>
+    <div class="theme-dot" style="background: #ff6a00; color: #ff6a00;" onclick="setTheme('sunset', this)"></div>
+    <div class="theme-dot" style="background: #0575e6; color: #0575e6;" onclick="setTheme('ocean', this)"></div>
+    <div class="theme-dot" style="background: #434343; color: #ffffff;" onclick="setTheme('dark', this)"></div>
+  </div>
+
+  <button class="btn-start" id="send">Start på TV</button>
+  <div id="status">Klar for oppkobling</div>
+</div>
+
+<script>
+  const APP_ID = "088AB566";
+  let selectedColors = ["#051937", "#004d7a", "#008793", "#00bf72"];
+  const themes = {
+    nordlys: ["#051937", "#004d7a", "#008793", "#00bf72"],
+    sunset: ["#ee0979", "#ff6a00", "#f42f4b", "#ff9068"],
+    ocean: ["#021b79", "#0575e6", "#203a43", "#2c5364"],
+    dark: ["#232526", "#414345", "#000000", "#434343"]
+  };
+
+  function setTheme(t, el) {
+    selectedColors = themes[t];
+    document.querySelectorAll('.theme-dot').forEach(d => d.classList.remove('active'));
+    el.classList.add('active');
+  }
+
+  window.__onGCastApiAvailable = (available) => {
+    if (available) {
+      cast.framework.CastContext.getInstance().setOptions({
+        receiverApplicationId: APP_ID,
+        autoJoinPolicy: chrome.cast.AutoJoinPolicy.ORIGIN_SCOPED
+      });
+    }
+  };
+
+  document.getElementById("send").onclick = async () => {
+    const session = cast.framework.CastContext.getInstance().getCurrentSession();
+    if (!session) return alert("Vennligst koble til TV via Cast-ikonet øverst.");
+
+    const [h, m] = document.getElementById("time").value.split(":").map(Number);
+    const target = new Date(); target.setHours(h, m, 0, 0);
+    if (target < new Date()) target.setDate(target.getDate() + 1);
+
+    const loadRequest = new chrome.cast.media.LoadRequest(new chrome.cast.media.MediaInfo("count", "application/x-cast"));
+    loadRequest.customData = {
+      targetEpoch: target.getTime(),
+      label: document.getElementById("label").value,
+      musicUrl: document.getElementById("music").value,
+      backgroundColors: selectedColors
+    };
+    await session.loadMedia(loadRequest);
+    document.getElementById("status").innerText = "Suksess! Sjekk TV-en.";
+  };
+</script>
 </body>
 </html>
