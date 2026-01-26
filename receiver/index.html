@@ -18,7 +18,6 @@
             color: #fff; display: flex; flex-direction: column; align-items: center; justify-content: center;
         }
 
-        /* Dette laget ligger over alt og flasher når tiden er ute */
         body::after {
             content: ''; position: fixed; top: 0; left: 0; width: 100%; height: 100%;
             background: white; opacity: var(--flash-opacity); z-index: 100;
@@ -29,8 +28,7 @@
         
         #wall-clock { 
             position: absolute; top: 40px; right: 60px; 
-            font-size: 2.2vw; /* Gjort mindre som ønsket */
-            font-weight: 300; opacity: 0.6; letter-spacing: 1px; 
+            font-size: 2.2vw; font-weight: 300; opacity: 0.6; letter-spacing: 1px; 
         }
 
         .main-container { text-align: center; z-index: 10; }
@@ -63,7 +61,7 @@
     <script src="https://www.gstatic.com/cast/sdk/libs/caf_receiver/v3/cast_receiver_framework.js"></script>
 </head>
 <body>
-    <div id="wall-clock">00:00</div>
+    <div id="wall-clock">00:00:00</div>
     
     <div class="main-container" id="container">
         <div id="title-display" class="title">Klar</div>
@@ -81,7 +79,6 @@
         const playerManager = ctx.getPlayerManager();
         const state = { target: null, finished: false };
 
-        // 24-timers klokke i hjørnet
         setInterval(() => { 
             const now = new Date();
             const timeStr = now.toLocaleTimeString('nb-NO', { hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: false });
@@ -93,11 +90,9 @@
             state.target = cd.targetEpoch;
             state.finished = false;
             
-            // Nullstill UI hvis ny timer startes
             document.body.classList.remove('is-done');
             document.documentElement.style.setProperty('--flash-opacity', '0');
 
-            // Fade farger over (skjer automatisk pga CSS transition: all 3s)
             if (cd.backgroundColors) {
                 const r = document.documentElement;
                 cd.backgroundColors.forEach((c, i) => r.style.setProperty(`--c${i+1}`, c));
@@ -105,13 +100,30 @@
 
             const music = document.getElementById("bg-music");
             if (cd.musicUrl) {
-                music.src = cd.musicUrl; music.load();
-                const play = () => music.play().catch(() => setTimeout(play, 1000));
-                music.oncanplay = play;
+                // VIKTIG: Nullstill og last på nytt
+                music.pause();
+                music.src = cd.musicUrl;
+                music.load();
+                
+                // Forbedret play-logikk for å omgå autoplay-sperre
+                const attemptPlay = () => {
+                    music.play().then(() => {
+                        console.log("Musikk startet!");
+                    }).catch(e => {
+                        console.log("Venter på interaksjon for lyd...", e);
+                        setTimeout(attemptPlay, 1000);
+                    });
+                };
+                music.oncanplaythrough = attemptPlay;
+
                 const label = document.getElementById("music-text");
                 label.style.display = "inline-block";
                 label.textContent = "🎵 " + cd.musicUrl.split('/').pop().replace('.m4a','').replace(/_/g,' ');
+            } else {
+                music.pause();
+                document.getElementById("music-text").style.display = "none";
             }
+            
             document.getElementById("title-display").textContent = cd.label || "NEDTELLING";
             return data;
         });
@@ -133,18 +145,18 @@
             state.finished = true;
             document.getElementById("bg-music").pause();
             document.getElementById("end-sound").play();
-            
-            // Start den sleeke avslutningssekvensen
             document.body.classList.add('is-done');
-            
-            // Flash-effekt
             document.documentElement.style.setProperty('--flash-opacity', '0.4');
             setTimeout(() => {
                 document.documentElement.style.setProperty('--flash-opacity', '0');
             }, 800);
         }
 
-        ctx.start({ disableIdleTimeout: true });
+        // HINDRER DVALE OG STARTER RECEIVER
+        const options = new cast.framework.CastReceiverOptions();
+        options.maxInactivity = 208800; 
+        options.disableIdleTimeout = true;
+        ctx.start(options);
     </script>
 </body>
 </html>
