@@ -67,7 +67,6 @@
 
   h1 { font-size: 20px; margin: 0; font-weight: 700; }
 
-  /* Cast-ikon fiks: Hindrer at det blir stort på PC og legger til animasjon */
   google-cast-launcher {
     display: block;
     width: 38px;
@@ -110,10 +109,9 @@
     color: white;
     font-size: 16px;
     outline: none;
-    appearance: none; /* Fjerner standard styling på dropdown */
+    appearance: none;
   }
 
-  /* Hvit klokke-ikon for tid-feltet */
   input[type="time"]::-webkit-calendar-picker-indicator {
     filter: invert(1);
     cursor: pointer;
@@ -169,7 +167,7 @@
 
 <div class="card">
   <div class="header">
-    <h1 style="margin:0; font-size: 28px; font-weight: 800;">Cast Control</h1>
+    <h1>Cast Control</h1>
     <google-cast-launcher></google-cast-launcher>
   </div>
 
